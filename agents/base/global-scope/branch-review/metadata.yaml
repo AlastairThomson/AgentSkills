@@ -1,0 +1,11 @@
+name: branch-review
+description: "Audit every unmerged branch in a git repository: classify each, flag merge risks, write CHANGES.md at the repo root, and return a recommendation table. Use when the user asks to review branches, see which PRs are ready to merge, identify stale branches, or produce a CHANGES.md. Read-only against source; the only write is CHANGES.md."
+tools: [Bash, Read, Write, Grep, Glob]
+model: sonnet
+extras:
+  opencode:
+    mode: subagent
+  kilo:
+    mode: subagent
+  codex:
+    sandbox_mode: read-only

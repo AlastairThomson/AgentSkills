@@ -1,0 +1,10 @@
+# Local-only files containing real subscription / tenant / account identifiers
+# kept on disk for testing but never committed.
+*.local.json
+*.local.yaml
+*.local.yml
+*.local.toml
+
+# Editor / interpreter cruft
+.Rhistory
+.DS_Store

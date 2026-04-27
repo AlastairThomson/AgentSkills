@@ -1,0 +1,26 @@
+{
+  "skill_name": "deep-review",
+  "evals": [
+    {
+      "id": 1,
+      "name": "devteamswarm-full-audit",
+      "prompt": "Please conduct a deep review of the project at /Users/alastair/Developer/DevTeamSwarm and produce a full audit report. There are external audits already in that repo at CLAUDE_REVIEW.md, CODEX_REVIEW.md, and GEMINI_REVIEW.md — do NOT read those until after you produce your own findings; then use them only for the comparison appendix. I want to see what the deep-review skill catches independently.",
+      "expected_output": "A full multi-axis review report covering all eight axes, catching at minimum: (1) K8s advertised but factory rejects it / k8s_agent.rs is no-op; (2) agent-sidecar OrchestratorClient is todo!(); (3) http_server.rs /ws handler drops the socket; (4) orchestrator collapses Pty|Sdk|Gemini to PTY; (5) Tauri frontendDist relative path breaking clean-worktree build OR some other user-journey failure; (6) hollow BDD steps (ballpark should be 200+, not 13); (7) WebSocket query-token fallback; (8) at least one security-boundary issue (MCP, AgentId validation, or similar). Must include a user-journey walk section. Must cover all eight axes (coverage gaps acknowledged explicitly if any). Report file written to docs/reviews/DEEP_REVIEW_*.md.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "small-clean-project-negative-control",
+      "prompt": "Please conduct a deep review of this well-maintained CLI utility repo. Produce a full audit report. (Assume target repo is something clean like a small Rust/Python library with good hygiene.)",
+      "expected_output": "A review that does NOT fabricate CRITICAL/HIGH findings when the project is genuinely healthy. Must still cover all eight axes (positive findings for healthy axes are acceptable). User-journey walk must be attempted. If no issues are found, the TL;DR must say 'shippable' and the report must not pad with low-quality findings to appear thorough.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "phrasing-trigger-is-this-shippable",
+      "prompt": "Is this project shippable? /Users/alastair/Developer/DevTeamSwarm",
+      "expected_output": "The skill should trigger on this phrasing and produce the same multi-axis review as eval #1. Tests that the description triggers on casual phrasings like 'is this shippable'.",
+      "files": []
+    }
+  ]
+}

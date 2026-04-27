@@ -1,0 +1,140 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AuthProbe",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetCallerIdentity"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMAccessControlReadOnly",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetAccountSummary",
+        "iam:GetAccountPasswordPolicy",
+        "iam:ListAccountAliases",
+        "iam:ListUsers",
+        "iam:ListRoles",
+        "iam:ListGroups",
+        "iam:ListPolicies",
+        "iam:GenerateCredentialReport",
+        "iam:GetCredentialReport"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "IAMPerPrincipalExpansion",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser",
+        "iam:GetRole",
+        "iam:GetGroup",
+        "iam:ListUserPolicies",
+        "iam:ListAttachedUserPolicies",
+        "iam:GetUserPolicy",
+        "iam:ListGroupsForUser",
+        "iam:ListGroupPolicies",
+        "iam:ListAttachedGroupPolicies",
+        "iam:GetGroupPolicy",
+        "iam:ListRolePolicies",
+        "iam:ListAttachedRolePolicies",
+        "iam:GetRolePolicy",
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions",
+        "iam:ListEntitiesForPolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ConfigConfigurationManagement",
+      "Effect": "Allow",
+      "Action": [
+        "config:DescribeConfigurationRecorders",
+        "config:DescribeConfigRules",
+        "config:DescribeComplianceByConfigRule",
+        "config:DescribeDeliveryChannels"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CloudTrailAuditLogging",
+      "Effect": "Allow",
+      "Action": [
+        "cloudtrail:DescribeTrails",
+        "cloudtrail:GetTrailStatus",
+        "cloudtrail:GetEventSelectors",
+        "cloudtrail:GetInsightSelectors",
+        "cloudtrail:ListTrails"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecurityHubRiskAssessment",
+      "Effect": "Allow",
+      "Action": [
+        "securityhub:DescribeHub",
+        "securityhub:GetEnabledStandards",
+        "securityhub:GetFindings"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "GuardDutyIncidentResponse",
+      "Effect": "Allow",
+      "Action": [
+        "guardduty:ListDetectors",
+        "guardduty:GetDetector",
+        "guardduty:ListFindings",
+        "guardduty:GetFindings"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "S3MediaProtectionMetadataOnly",
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets",
+        "s3:GetBucketPolicy",
+        "s3:GetEncryptionConfiguration",
+        "s3:GetBucketVersioning",
+        "s3:GetBucketLogging",
+        "s3:GetBucketPublicAccessBlock",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "KMSCryptoPolicy",
+      "Effect": "Allow",
+      "Action": [
+        "kms:ListKeys",
+        "kms:ListAliases",
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:GetKeyRotationStatus",
+        "kms:ListGrants",
+        "kms:ListResourceTags"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "EC2NetworkCommunications",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeNetworkAcls",
+        "ec2:DescribeFlowLogs",
+        "ec2:DescribeRegions",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeVpcPeeringConnections"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+name: bdd-audit
+description: "Audit a repo's BDD spec coverage. Classify each feature area as wired / partially wired / stubbed / missing, determine the root cause (implemented-but-untested vs truly-missing vs deferred), and return a prioritised build-vs-test action list. Read-only — never modifies code or specs."
+tools: [Bash, Read, Grep, Glob]
+model: sonnet
+extras:
+  opencode:
+    mode: subagent
+  kilo:
+    mode: subagent
+  codex:
+    sandbox_mode: read-only

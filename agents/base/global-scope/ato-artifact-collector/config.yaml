@@ -1,0 +1,57 @@
+version: 1
+
+# User-global defaults for the ATO artifact collector.
+# Per-repo overrides go in .ato-package.yaml at the repo root (shallow merge per source).
+#
+# Replace every <placeholder> below with values for your environment, or copy this file to
+# config.local.yaml (gitignored) and keep your real values out of git.
+
+sharepoint:
+  enabled: false
+
+aws:
+  enabled: false
+  # Fill these in once SSO is configured. The sibling refuses to run with placeholder IDs.
+  accounts:
+    - "<aws-account-id>"
+  regions:
+    - us-east-1
+  services:
+    - iam
+    - config
+    - cloudtrail
+    - securityhub
+    - guardduty
+    - s3
+    - kms
+    - ec2
+    - amplify
+    - lambda
+    - dynamodb
+  auth:
+    method: sso
+    profile: <aws-sso-profile>
+    sso_start_url: "https://<your-sso-portal>.awsapps.com/start/#/"
+    region: us-east-1
+    login_instruction: |
+      Run: aws sso login --profile <aws-sso-profile>
+
+azure:
+  enabled: false
+  subscriptions:
+    - <azure-subscription-id>
+  regions:
+    - eastus
+  auth:
+    method: helper
+    helper_command: <path-to-your-azure-login-helper>
+    tenant: <azure-tenant-id>
+    cloud: AzureCloud
+    account_hint: <service-principal-app-id>
+    login_instruction: |
+      Run: <path-to-your-azure-login-helper>
+      (e.g. a script that pulls service-principal creds from your password manager
+       and runs `az login --service-principal`)
+
+smb:
+  enabled: false

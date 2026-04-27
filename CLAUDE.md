@@ -1,0 +1,165 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this repo is
+
+A collection of **multi-CLI AI skills and agents** for Claude Code, OpenCode, Kilo Code, OpenAI Codex, and Gemini CLI. Skills (stateless step-by-step guides surfaced by description) live under `skills/`; agents (isolated-context subprocesses) live under `agents/`. Each agent is authored once in a CLI-agnostic base form and rendered to each CLI's native format at install time.
+
+Both trees are split into **`global-scope/`** (user-level, installed once per CLI into each CLI's global directory — available in every repo) and **`repo-scope/`** (per-repo, installed by `skill-sync` into each CLI's per-repo directory only when the toolchain matches).
+
+Repo layout:
+
+```
+skills/
+  global-scope/      # workflow utilities that work on any repo
+  repo-scope/        # toolchain-specific; pulled in by skill-sync
+agents/
+  base/              # canonical, CLI-agnostic agent source (body + metadata.yaml)
+    global-scope/
+    repo-scope/
+  renderers/         # per-CLI transformers: claude.sh, opencode.sh, kilo.sh, gemini.sh, codex.sh
+                     # + codex-agents-md.sh for the Codex AGENTS.md inventory
+install.sh           # per-CLI installer with --for <cli>[,<cli>...]
+CLAUDE.md            # this file
+```
+
+**Scope-selection rule.** A skill or agent belongs in `global-scope/` if it works usefully on any repo regardless of language (`deep-review`, `branch-review`, `bdd-audit`, `coverage-audit`, `repo-health`, `merge-sprint`, `skill-sync`, `skill-interview`, the ATO orchestrator + sources, `auth-*`). It belongs in `repo-scope/` if it is meaningful only when a specific toolchain or target is present (language preflights, testing guides, `preflight` dispatcher, `deploy-app` + siblings, `ios-app-template-conventions`).
+
+A paired stub and agent live in matching scopes — if the stub is global, the agent is too.
+
+## CLI support
+
+| CLI | Global dir | Per-repo dir | Agent file | Identity |
+|---|---|---|---|---|
+| Claude Code | `~/.claude/` | `<repo>/.claude/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
+| OpenCode | `~/.config/opencode/` | `<repo>/.opencode/` | `<name>.md` (MD + YAML, no name) | filename |
+| Kilo Code | `~/.config/kilo/` | `<repo>/.kilo/` | `<name>.md` (MD + YAML, no name) | filename |
+| OpenAI Codex | `~/.codex/` | `<repo>/.codex/` | `<name>.toml` + `AGENTS.md` | TOML `name =` |
+| Gemini CLI | `~/.gemini/` | `<repo>/.gemini/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
+
+The installer (`install.sh --for <cli>[,<cli>...]`) and `skill-sync` both accept a multi-CLI selection. The user chooses which CLIs to install for; each selected CLI gets its own correctly-shaped copy of every agent.
+
+## Skill anatomy
+
+Every `skills/<name>/` directory contains a `SKILL.md`:
+
+```markdown
+---
+description: "One-line hook the harness uses to decide when to surface this skill."
+---
+
+# Human-readable title
+
+Body: step-by-step instructions, tables, shell snippets.
+```
+
+- `description` is **required** and is the only field the harness matches against. Write it as a trigger sentence — lead with what the skill does, then when to use it. Keep it ≤200 chars where possible.
+- The directory name is the canonical skill identifier.
+- Skills may carry supporting material in sibling folders (e.g. `references/`). Reference those from `SKILL.md` using relative paths.
+
+## Agent anatomy
+
+Agents live in a **base + renderer** pattern. The canonical source is CLI-agnostic; the renderers produce CLI-native files at install time.
+
+Every `agents/base/<scope>/<name>/` directory contains:
+
+```
+agents/base/<scope>/<name>/
+  agent.md              # prompt body — no frontmatter
+  metadata.yaml         # canonical metadata (name, description, tools, model, extras.*)
+  references/           # optional — copied verbatim into every CLI's install
+  evals/                # optional
+  config.yaml           # optional
+```
+
+`metadata.yaml` shape:
+
+```yaml
+name: <agent-name>
+description: "When the parent model should invoke this agent. Specific trigger language."
+tools: [Bash, Read, Edit, Grep, Glob, Skill]
+model: sonnet                                  # opus / sonnet / haiku / inherit
+extras:                                        # optional per-CLI hints
+  opencode:
+    mode: subagent
+  kilo:
+    mode: subagent
+  codex:
+    sandbox_mode: read-only                    # or workspace-write for agents that write files
+```
+
+At install time, each renderer at `agents/renderers/<cli>.sh` reads the agent's base directory and emits the CLI's native format:
+
+- `claude.sh` / `gemini.sh` → Markdown with `name:` frontmatter
+- `opencode.sh` / `kilo.sh` → Markdown without `name:` (filename is authoritative); adds `mode:`
+- `codex.sh` → TOML with `developer_instructions = """<body>"""`
+- `codex-agents-md.sh` → `AGENTS.md` inventory listing every installed agent
+
+Agents that bundle `references/`, `evals/`, or `config.yaml` are installed as directory-form (`<cli-root>/agents/<name>/<name>.<ext>`); simple agents land as flat files (`<cli-root>/agents/<name>.<ext>`).
+
+**Shape rule:** the rendered frontmatter is CLI-specific, but the body (`agent.md`) is identical across CLIs. When editing an agent, edit `agent.md` — do not touch the rendered output in any CLI install tree. When adding a field that matters for only one CLI, put it under `extras.<cli>.` in `metadata.yaml` and teach that CLI's renderer to honor it.
+
+## Skill ↔ agent pairing
+
+A thin-stub skill often pairs with an agent. The stub triggers on user intent (preserving slash-command discoverability like `/branch-review`); the agent does the actual multi-step work in its own context. Current pairs:
+
+| Stub skill | Agent | Scope |
+|---|---|---|
+| `skills/global-scope/deep-review/` | `agents/base/global-scope/deep-review/` | global |
+| `skills/global-scope/branch-review/` | `agents/base/global-scope/branch-review/` | global |
+| `skills/global-scope/bdd-audit/` | `agents/base/global-scope/bdd-audit/` | global |
+| `skills/global-scope/coverage-audit/` | `agents/base/global-scope/coverage-investigator/` (optional; skill is usable without agent) | global |
+| `skills/global-scope/ato-artifact-collector/` | `agents/base/global-scope/ato-artifact-collector/` | global |
+
+`install.sh` installs every global-scope pair into each selected CLI's global directory, rendered per CLI. `skill-sync` handles repo-scope pairs (none today; reserved). Both share the `agents/base/` + `agents/renderers/` pattern.
+
+## Skills and agents must be generic
+
+Every directory under `skills/` or `agents/` is a **generic** artifact — safe to drop into any repo. No hardcoded crate names, project-specific paths, tenant names, or CLI tools that only exist in one product. If a command, path, or concept only makes sense for a specific downstream project, either genericize it (placeholders, framework-neutral examples) or keep it out of this repo. `ios-app-template-conventions/` is the one intentional exception — its description announces it as opinionated, so users opt in knowingly.
+
+## Skill categories
+
+**Global-scope** (`skills/global-scope/`, `agents/global-scope/`):
+
+- **Audit / review** — stub+agent pairs `bdd-audit/`, `branch-review/`, `deep-review/`, and skill `coverage-audit/` (optionally paired with `coverage-investigator` agent); `repo-health/`
+- **Batched-PR workflow** — `merge-sprint/`
+- **Per-repo provisioning** — `skill-sync/`, `skill-interview/`
+- **Credentials** — `auth-config/` (resolver — reads `~/.agent-skills/auth/auth.yaml`, runs user's vault CLI, validates session) and `auth-interview/` (AskUserQuestion-driven bootstrap of the config file, 0600 on write)
+
+**Repo-scope** (`skills/repo-scope/`):
+
+- **Preflight dispatcher** — `preflight/` (detects toolchains and delegates via the Skill tool to the matching sibling)
+- **Language preflight siblings** — `cargo-preflight/` (Rust), `xcode-preflight/` (Swift + Objective-C), `python-preflight/`, `node-preflight/` (TypeScript + JavaScript), `jvm-preflight/` (Java + Kotlin), `go-preflight/`, `ruby-preflight/`, `dotnet-preflight/` (C#), `cmake-preflight/` (C + C++), `php-preflight/`, `data-script-preflight/` (SQL + R + SAS + Perl)
+- **Testing guides** — `rust-testing/`, `swift-testing/`, `python-testing/`, `node-testing/`, `jvm-testing/`
+- **Project conventions templates** — `ios-app-template-conventions/` (opt-in; one team's Swinject + Swift Testing + FileSystemSynchronizedRootGroup + Backups stack)
+- **Ops / deployment** — `deploy-app/` (dispatcher), `native-app-deploy/`, `web-app-deploy/`, `container-app-deploy/`
+
+`agents/base/repo-scope/` is currently empty and reserved for repo-scoped agents.
+
+`preflight` is the dispatcher — it invokes the matching `*-preflight` sibling via the Skill tool, with an inline fallback for unrecognized toolchains. When adding a new language-specific preflight, (1) wire it into `skills/repo-scope/preflight/SKILL.md`'s marker table, (2) add a matching row to `skills/global-scope/skill-sync/SKILL.md`'s detection table, and (3) keep the sibling's description prefixed `"Pre-PR checklist for <language>:"` so the harness disambiguates cleanly.
+
+## ATO orchestrator + sibling pattern
+
+The ATO orchestrator lives as an **agent** at `agents/base/global-scope/ato-artifact-collector/`, fronted by a thin stub skill at `skills/global-scope/ato-artifact-collector/`. The four `ato-source-*` **skills** (under `skills/global-scope/`) are invoked by the agent via the Skill tool when the user enables the corresponding external scope (AWS, Azure, SharePoint/M365, SMB shares). The full hand-off contract is documented in `agents/base/global-scope/ato-artifact-collector/references/sibling-contract.md` — read it before editing any sibling. Invariants the siblings all share:
+
+- **Read-only.** No `create-*`, `put-*`, `delete-*`, `modify-*`, or any write verb. If asked to remediate, refuse and escalate.
+- **Ambient auth only.** Siblings never store credentials, never call `aws configure`, never touch `~/.aws/credentials` etc. They use whatever session the user already established via the native tool.
+- **Scope-confirmed in-session.** Each sibling re-confirms its scope before making external calls; the orchestrator does not bypass that prompt.
+- **Graceful degradation.** If a sibling fails (auth missing, scope declined), the orchestrator records the failure and continues with remaining sources. Repo-only runs are a first-class mode.
+
+Siblings write evidence into `docs/ato-package/{NN-family-slug}/evidence/` with source-prefixed filenames (`aws_*`, `azure_*`, `sharepoint_*`, `smb_*`) and citation batches into `docs/ato-package/.staging/{source}-citations.json`.
+
+## Editing conventions
+
+- **File casing:** Skills use `SKILL.md` (uppercase). Agents use `agent.md` (under `agents/base/<scope>/<name>/`). Keep this consistent — mixed casing works on macOS but would break on a case-sensitive filesystem.
+- **`metadata.yaml` must stay valid YAML.** A renderer will fail if frontmatter parses oddly. Keep `description:` as a single-line quoted string.
+- **Never commit per-CLI-rendered output.** Agent changes land in `agent.md` + `metadata.yaml` under `agents/base/`. The CLI-specific output is generated by the installer; do not hand-edit it.
+- **Shell snippets in skill / agent bodies are contracts**, not examples — users will copy-paste them. When you change a command, verify it still runs on the toolchain it targets.
+- **When editing a paired stub skill or its agent, check both.** The skill's description and the agent's description must stay coherent — the skill is what triggers, the agent is what runs.
+- **When adding a new CLI:** add `agents/renderers/<cli>.sh`, teach `install.sh` about its target root and file extension, add a row to the CLI-support table above, and add a case to `skill-sync`'s per-CLI install loop.
+- The repo has no root-level `README.md`; the skill corpus is its own documentation. Don't create one unless asked.
+
+## Working with the `repo/` sandbox
+
+If a task mentions `x3f-*` crates, `cargo`, or anything Rust-shaped, you are almost certainly in `repo/` — `cd` there and follow its own `CLAUDE.md`. Changes to the sandbox are not changes to the skills and should not land in the same commit.

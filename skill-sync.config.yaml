@@ -1,0 +1,11 @@
+version: 1
+source:
+  repo: <Owner>/<SkillsRepoName>        # GitHub owner/repo - repo must be public or all team members must have access
+  ref: main                             # branch, tag, or commit SHA (prefer a pinned tag)
+allowlist: []                           # empty = every skill in source is available
+                                        # non-empty = only these skill directory names may be installed
+deny: []                                # always exclude these (takes precedence over allowlist)
+auth:
+  method: gh                            # gh | ssh
+                                        # gh  → use `gh` CLI (ambient auth, no tokens stored)
+                                        # ssh → use `git` over SSH (keys must already be configured)

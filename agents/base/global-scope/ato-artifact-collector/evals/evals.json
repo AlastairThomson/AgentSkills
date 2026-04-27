@@ -1,0 +1,35 @@
+{
+  "skill_name": "ato-artifact-collector",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Collect all the NIST 800-53 security artifacts from this repo and tell me what's missing for our ATO package",
+      "expected_output": "A docs/ato-package/ directory with collected and generated artifacts organized by section, INDEX.md mapping artifacts to the guide, CHECKLIST.md with per-item status, and a clear gap analysis showing what's missing",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "We need to get our ATO together — can you scan the codebase and figure out what security evidence we already have and what gaps we need to fill?",
+      "expected_output": "Same as eval 1 but triggered by casual phrasing — should produce equivalent structured output with artifact collection, generation, and gap analysis",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I need to understand what we have for the access control and authentication sections of our security package. Deep dive into the code and configs.",
+      "expected_output": "Focused analysis of Sections 4 (Access Control) and 5 (Authentication & Session) with deep code analysis of AuthFilter, RoleFilter, AuthService, SAML config, session config, and role definitions. Should produce generated artifacts with exact file:line citations.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Build our ATO package. Our policies live in a SharePoint site at https://contoso.sharepoint.com/sites/ato and our DR runbooks are on the SMB share //fileserver.corp/ato. Pull from both plus the repo.",
+      "expected_output": "Step 0 (Scope Selection) detects the SharePoint and SMB sources from the prompt (or from .ato-package.yaml) and invokes ato-source-sharepoint and ato-source-smb via the Skill tool. Each sibling performs its own scope confirmation before acting. Sibling-downloaded files land under docs/ato-package/{family}/evidence/ with sharepoint_ and smb_ prefixes. Citation batches at docs/ato-package/.staging/sharepoint-citations.json and smb-citations.json are merged into CODE_REFERENCES.md during Step 7 with the new Source column populated as 'sharepoint' and 'smb' for those rows and 'repo' for repo-derived rows. CR-NNN IDs are unique across all sources — no collisions. If either sibling fails auth, it writes .staging/{source}-error.json and the orchestrator continues gracefully with the remaining sources and repo-only evidence.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Full ATO collection across everything we've got: the repo, SharePoint, AWS account 123456789012 in us-east-1, Azure subscription 'Production', and the //fileserver.corp/ato SMB share. US regions only.",
+      "expected_output": "Step 0 resolves scope for all four external sources plus repo. Orchestrator invokes ato-source-sharepoint, ato-source-aws, ato-source-azure, and ato-source-smb siblings in turn via the Skill tool. Each sibling confirms its own scope, probes ambient auth (m365 status / aws sts get-caller-identity / az account show / OS-specific mount), and refuses non-US regions before any API call. AWS uses mcp__AWS_API_MCP_Server__call_aws; Azure uses az CLI with ~/Applications/bin/azureauth helper if auth fails; SMB uses mount_smbfs on macOS with read-only nobrowse flags and guarantees unmount on exit. Evidence files land with correct source prefixes (sharepoint_/aws_/azure_/smb_) under the right control family folders. Four citation batches are written to .staging/ and merged into a single CODE_REFERENCES.md with the Source column correctly reflecting each origin. CR-NNN IDs are renumbered on merge so there are no collisions across batches. Per-source link formats are used: git permalinks for repo, SharePoint doc URLs, AWS console links with region+resource anchor, Azure portal links with subscription+resourceId, smb:// URIs for SMB. If any sibling fails (auth missing, scope declined, non-US region, mount failure) it writes .staging/{source}-error.json and the orchestrator continues with the remaining sources — graceful degradation, never a hard halt.",
+      "files": []
+    }
+  ]
+}

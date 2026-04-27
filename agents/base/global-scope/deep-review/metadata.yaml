@@ -1,0 +1,11 @@
+name: deep-review
+description: "Conduct a complete multi-axis review of a software project covering feature-integrity, stubs/dead-code, user-journey, test quality, security + full threat model (including LLM prompt-injection and agent-to-agent attack paths inside the trust boundary), reliability, ship hygiene, and doc↔code cross-check. Use whenever the caller asks for a 'full audit', 'code review', 'external audit', 'pre-release review', 'threat model', 'is this shippable', 'deep review', or whenever an adversarial review of another agent's work is needed. Produces a structured threat model and refuses to submit a report with unexplained axis gaps. Read-only except for the final report written under docs/reviews/."
+tools: [Bash, Read, Write, Grep, Glob, Agent]
+model: opus
+extras:
+  opencode:
+    mode: subagent
+  kilo:
+    mode: subagent
+  codex:
+    sandbox_mode: read-only

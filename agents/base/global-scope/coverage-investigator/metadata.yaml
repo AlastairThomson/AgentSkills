@@ -1,0 +1,11 @@
+name: coverage-investigator
+description: "Investigate a specific test-coverage gap — given one file or module at N% coverage, read its public entry points, find existing tests, classify each uncovered entry point (pure / injectable / hard-wired / dead / integration-only), estimate effort to close the gap, and recommend a next action. Read-only — never writes tests or modifies code. Invoked by the `coverage-audit` skill when the user asks 'why is this file low?' or 'what would it take to reach target?'."
+tools: [Bash, Read, Grep, Glob]
+model: sonnet
+extras:
+  opencode:
+    mode: subagent
+  kilo:
+    mode: subagent
+  codex:
+    sandbox_mode: read-only

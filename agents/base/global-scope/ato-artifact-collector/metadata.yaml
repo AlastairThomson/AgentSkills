@@ -1,0 +1,11 @@
+name: ato-artifact-collector
+description: "8-step ATO / NIST 800-53 evidence-collection orchestrator. Scans a repo (+ optionally AWS / Azure / SharePoint / SMB sources via sibling skills), produces a `docs/ato-package/` directory with 20+ evidence families, generates narrative documents with [CR-NNN] citations, writes INDEX.md + CHECKLIST.md + CODE_REFERENCES.md. Invoked by the thin `ato-artifact-collector` skill stub after scope is confirmed with the user."
+tools: [Bash, Read, Write, Edit, Grep, Glob, Skill]
+model: opus
+extras:
+  opencode:
+    mode: subagent
+  kilo:
+    mode: subagent
+  codex:
+    sandbox_mode: workspace-write
