@@ -14,7 +14,7 @@ package:
 
 ## File naming
 
-JSON exports land in `{evidence_root}/{NN-family-slug}/evidence/` with:
+JSON exports land in `{evidence_root}/{NN-CF-section-slug}/evidence/` with:
 
 ```
 aws_{service}-{artifact}.json
@@ -181,23 +181,23 @@ Two- to four-sentence overview of what the data shows in aggregate.
   "citations": [
     {
       "id_placeholder": "AWS-001",
-      "cited_by": "04-access-control/access-control-evidence.md",
+      "cited_by": "controls/AC-access-control/access-control-evidence.md",
       "location": "arn:aws:iam::123456789012:role/app-runtime",
       "link": "https://console.aws.amazon.com/iam/home?region=us-east-1#/roles/app-runtime",
       "purpose": "Runtime role trust policy — assumed by ARO workload identity",
-      "control_family": "04-access-control",
-      "evidence_file": "04-access-control/evidence/aws_iam-roles.json",
-      "digest_file": "04-access-control/evidence/aws_iam-role-app-runtime.md"
+      "control_family": "controls/AC-access-control",
+      "evidence_file": "controls/AC-access-control/evidence/aws_iam-roles.json",
+      "digest_file": "controls/AC-access-control/evidence/aws_iam-role-app-runtime.md"
     },
     {
       "id_placeholder": "AWS-002",
-      "cited_by": "06-audit-logging/audit-logging-evidence.md",
+      "cited_by": "controls/AU-audit-accountability/audit-logging-evidence.md",
       "location": "arn:aws:cloudtrail:us-east-1:123456789012:trail/org-trail",
       "link": "https://console.aws.amazon.com/cloudtrail/home?region=us-east-1#/trails/arn:aws:cloudtrail:us-east-1:123456789012:trail/org-trail",
       "purpose": "Multi-region management event trail — immutable log source",
-      "control_family": "06-audit-logging",
-      "evidence_file": "06-audit-logging/evidence/aws_cloudtrail-trails.json",
-      "digest_file": "06-audit-logging/evidence/aws_cloudtrail-trail-org-trail.md"
+      "control_family": "controls/AU-audit-accountability",
+      "evidence_file": "controls/AU-audit-accountability/evidence/aws_cloudtrail-trails.json",
+      "digest_file": "controls/AU-audit-accountability/evidence/aws_cloudtrail-trail-org-trail.md"
     }
   ],
   "partial_failures": [

@@ -13,7 +13,7 @@ aws sts get-caller-identity
 Must succeed before anything else. The returned `Account` must match one of
 `scope.accounts` or the sibling refuses the run.
 
-## IAM → 04-access-control
+## IAM → controls/AC-access-control
 
 ### Inventory (list-style)
 
@@ -79,7 +79,7 @@ aws iam get-policy --policy-arn {boundaryArn}
 aws iam get-policy-version --policy-arn {boundaryArn} --version-id {versionId}
 ```
 
-## Config → 03-configuration-management
+## Config → controls/CM-configuration-management
 
 ```
 aws configservice describe-configuration-recorders
@@ -88,7 +88,7 @@ aws configservice describe-compliance-by-config-rule
 aws configservice describe-delivery-channels
 ```
 
-## CloudTrail → 06-audit-logging
+## CloudTrail → controls/AU-audit-accountability
 
 ```
 aws cloudtrail describe-trails --include-shadow-trails
@@ -97,7 +97,7 @@ aws cloudtrail get-event-selectors --trail-name {trail-arn}
 aws cloudtrail get-insight-selectors --trail-name {trail-arn}
 ```
 
-## Security Hub → 20-risk-assessment
+## Security Hub → controls/RA-risk-assessment
 
 ```
 aws securityhub describe-hub
@@ -108,7 +108,7 @@ aws securityhub get-findings --max-items 500 \
 
 Always pass a `--max-items` cap — never fetch unbounded.
 
-## GuardDuty → 08-incident-response
+## GuardDuty → controls/IR-incident-response
 
 ```
 aws guardduty list-detectors
@@ -117,7 +117,7 @@ aws guardduty list-findings --detector-id {id} --max-items 500
 aws guardduty get-findings --detector-id {id} --finding-ids {ids...}
 ```
 
-## S3 → 15-media-protection
+## S3 → controls/MP-media-protection
 
 ```
 aws s3api list-buckets
@@ -131,7 +131,7 @@ aws s3api get-public-access-block --bucket {name}
 Only run per-bucket calls against buckets that pass the filter in
 `discovery-patterns.md` — do not enumerate every bucket.
 
-## KMS → 10-security-policies
+## KMS → controls/SC-system-communications-protection
 
 ```
 aws kms list-keys --limit 1000
@@ -142,7 +142,7 @@ aws kms list-grants --key-id {id} --limit 100
 aws kms list-resource-tags --key-id {id}
 ```
 
-## VPC / Security Groups → 16-network-communications
+## VPC / Security Groups → controls/SC-system-communications-protection
 
 ```
 aws ec2 describe-vpcs

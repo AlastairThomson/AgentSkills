@@ -6,15 +6,15 @@ Each section describes what to extract, how to organize it, and where to flag ga
 ## Table of Contents
 1. [General Generation Rules](#general-generation-rules)
 2. [Mermaid Diagram Templates](#mermaid-diagram-templates)
-3. [Section 1: System Design Document](#section-1-system-design-document)
-3. [Section 2: System Inventory](#section-2-system-inventory)
-4. [Section 3: Configuration Management](#section-3-configuration-management)
-5. [Section 4-5: Access Control & Authentication](#sections-4-5-access-control--authentication)
-6. [Section 6: Audit Logging](#section-6-audit-logging)
-7. [Section 7: Vulnerability Management](#section-7-vulnerability-management)
-8. [Section 16: Network & Communications](#section-16-network--communications)
-9. [Section 17: SDLC & Secure Development](#section-17-sdlc--secure-development)
-10. [Section 19: Interconnections](#section-19-interconnections)
+3. [SSP §01 — System Description](#section-1-system-design-document)
+4. [SSP §02 — System Inventory](#section-2-system-inventory)
+5. [SSP §09 — Configuration Management Plan](#section-3-configuration-management)
+6. [Controls AC + IA — Access Control & Authentication](#sections-4-5-access-control--authentication)
+7. [Controls AU — Audit Logging](#section-6-audit-logging)
+8. [SSP §10 + Controls SI/RA — Vulnerability Management](#section-7-vulnerability-management)
+9. [Controls SC — Network & Communications](#section-16-network--communications)
+10. [SSP §11 + Controls SA — SDLC & Secure Development](#section-17-sdlc--secure-development)
+11. [SSP §05 + Controls CA — Interconnections](#section-19-interconnections)
 
 ---
 
@@ -39,7 +39,7 @@ As you emit each `[CR-NNN]` tag, append a row to your in-memory reference list w
 | Field | Example |
 |---|---|
 | `id` | `CR-012` |
-| `cited_by` | `05-authentication-session/authentication-session-evidence.md` |
+| `cited_by` | `controls/IA-identification-authentication/ia-implementation.md`; `ssp-sections/01-system-description/system-description-evidence.md` |
 | `file` | `app/Filters/AuthFilter.php` |
 | `start_line` | 15 |
 | `end_line` | 28 |
@@ -108,7 +108,7 @@ the paragraph it illustrates, not at the end of the document.
 
 Use this when documenting SAML-based authentication. Relabel participants to
 match the actual IdP and SP in the target repo. Each numbered step should map
-to a `[CR-NNN]` in the narrative above.
+to a `[CR-NNN]` in the narrative above. Follow a similar pattern for other authentication methods e.g. OAuth, or internal database authentication etc.
 
 ````markdown
 ```mermaid

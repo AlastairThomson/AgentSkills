@@ -88,7 +88,8 @@ sibling for specifics. Common fields:
 - Source-specific scope fields (sites, accounts, subscriptions, shares, etc.)
 - `staging_dir` — absolute path to `docs/ato-package/.staging/` in the repo
 - `evidence_root` — absolute path to `docs/ato-package/` (so the sibling knows
-  where to drop files under `{NN-family-slug}/evidence/`)
+  where to drop files under either `ssp-sections/<NN>-<slug>/evidence/` or
+  `controls/<CF>-<slug>/evidence/<CONTROL-ID>/`)
 
 ## Outputs
 
@@ -96,20 +97,32 @@ The sibling writes to two locations:
 
 ### 1. Evidence files
 
-Copied or exported files land in
-`docs/ato-package/{NN-family-slug}/evidence/` with a source prefix so they
-can never collide with repo-sourced evidence:
+Copied or exported files land in **one** of the two destinations
+defined by the orchestrator's Step 3 layout, with a source prefix so
+they can never collide with repo-sourced evidence:
 
-- `sharepoint_*` — SharePoint downloads
+- `docs/ato-package/ssp-sections/<NN>-<slug>/evidence/<source>_<file>` —
+  for document-shaped artifacts that satisfy an SSP section (an SSP
+  itself, an IRP attachment, a CMP, an ISA/MOU, a POA&M).
+- `docs/ato-package/controls/<CF>-<slug>/evidence/<CONTROL-ID>/<source>_<file>` —
+  for per-control evidence (an IAM role definition for AC-2, an NSG
+  rule for SC-7, a CloudTrail trail for AU-2, etc.).
+
+Source prefixes:
+
+- `sharepoint_*` — SharePoint downloads (almost always SSP-section)
 - `aws_*` — AWS JSON exports, IAM reports, Config compliance JSON, etc.
+  (almost always control-folder, sub-folder named for the control ID)
 - `azure_*` — Azure JSON exports, policy state, NSG rules, etc.
-- `smb_*` — copies from SMB shares (with original filename preserved after
-  the prefix)
+  (almost always control-folder)
+- `smb_*` — copies from SMB shares (mix of SSP-section docs and
+  control evidence — depends on what the file is)
 
-The family slug is one of the 20 slugs defined in the orchestrator's Step 4.
-The sibling picks the family by matching the artifact to the discovery
-patterns in its own `references/discovery-patterns.md`, which cross-references
-the orchestrator's `references/artifact-mappings.md`.
+The slug and routing target come from the discovery-pattern table in
+the sibling's own `references/discovery-patterns.md`, which
+cross-references the orchestrator's `references/artifact-mappings.md`
+and the routing table at the bottom of the orchestrator's Step 4
+("File naming convention").
 
 #### 1a. Per-resource digest companions
 
@@ -148,12 +161,25 @@ One JSON file per sibling at
   "citations": [
     {
       "id_placeholder": "SP-001",
-      "cited_by": "10-security-policies/security-policies-evidence.md",
+      "cited_by": ["ssp-sections/06-policies-procedures/policies-procedures-evidence.md"],
       "location": "SSP-v2.docx",
       "link": "https://contoso.sharepoint.com/sites/app-ato/Shared%20Documents/SSP-v2.docx",
       "purpose": "Prior approved SSP — baseline for this revision",
-      "control_family": "10-security-policies",
-      "evidence_file": "10-security-policies/evidence/sharepoint_SSP-v2.docx"
+      "ssp_section": "06-policies-procedures",
+      "control_families": [],
+      "controls": ["PL-2"],
+      "evidence_file": "ssp-sections/06-policies-procedures/evidence/sharepoint_SSP-v2.docx"
+    },
+    {
+      "id_placeholder": "SP-002",
+      "cited_by": ["controls/AC-access-control/ac-implementation.md"],
+      "location": "Account-Review-2026-Q1.xlsx",
+      "link": "https://contoso.sharepoint.com/sites/app-ato/Shared%20Documents/Account-Review-2026-Q1.xlsx",
+      "purpose": "Quarterly account-review evidence for AC-2(3) inactive disable",
+      "ssp_section": null,
+      "control_families": ["AC"],
+      "controls": ["AC-2", "AC-2(3)"],
+      "evidence_file": "controls/AC-access-control/evidence/AC-2(3)/sharepoint_Account-Review-2026-Q1.xlsx"
     }
   ]
 }
@@ -164,15 +190,32 @@ Field reference:
 - `id_placeholder` — the sibling uses its own prefix (`SP-`, `AWS-`, `AZ-`,
   `SMB-`) and monotonic numbering within its batch. Step 7 renumbers these
   to contiguous `CR-NNN` IDs on merge.
-- `cited_by` — path (relative to `docs/ato-package/`) of the narrative doc
-  that should cite this. The sibling can leave this as the family's evidence
-  file path if no specific narrative section is implied — the human author
-  incorporates it during review.
+- `cited_by` — array of paths (relative to `docs/ato-package/`) for the
+  generated documents that should cite this evidence. May contain an
+  SSP-section narrative, one or more control-family implementation
+  statements, or both. The orchestrator concatenates the list into the
+  `Cited by` column of `CODE_REFERENCES.md` (semicolon-separated). When
+  the sibling can't pick a specific narrative, leave the array as
+  `[evidence_file]` so the human author can incorporate it during review.
 - `location` — human-readable locator: file name, ARN, resource ID, UNC path.
 - `link` — the external URL or URI (see the link format table in Step 7 of
   the orchestrator).
-- `purpose` — one-line description of why this matters to the control family.
-- `control_family` — one of the 20 slugs; determines the evidence subfolder.
+- `purpose` — one-line description of why this matters.
+- `ssp_section` — the slug of the SSP section this evidence supports
+  (e.g. `06-policies-procedures`), or `null` if the evidence is purely
+  per-control. Drives placement under `ssp-sections/<slug>/evidence/`.
+- `control_families` — array of NIST 800-53 family two-letter codes
+  whose implementation statement should pick up this evidence. May be
+  empty when `ssp_section` is set and the evidence has no
+  control-folder copy. Drives placement under each
+  `controls/<CF>-<slug>/`.
+- `controls` — array of one or more NIST 800-53 Rev 5 control identifiers
+  that the citation is evidence for. Use the most specific form
+  available: family code (`AC`), base control (`AC-2`), or enhancement
+  (`AC-2(4)`). The orchestrator copies this list into the `Controls`
+  column of `CODE_REFERENCES.md` during merge in Step 7. Required and
+  drives the `evidence/<CONTROL-ID>/` sub-folder placement inside each
+  control-family folder.
 - `evidence_file` — path (relative to `docs/ato-package/`) of the local copy
   the sibling wrote. Must actually exist at merge time. For cloud
   siblings this is the raw JSON.
@@ -181,6 +224,14 @@ Field reference:
   per-resource digest was synthesized; omitted for aggregate-only
   exports where the digest *is* the evidence file. Step 7 prefers
   `digest_file` as the human-facing link in `CODE_REFERENCES.md`.
+
+When the same evidence supports both an SSP section and one or more
+control families (typical for things like the IRP document, an OpenShift
+NetworkPolicy file, a CloudTrail config), copy the file into every
+applicable destination and list every destination in `cited_by`.
+`evidence_file` is the **canonical primary copy**; the sibling is
+responsible for `cp`-ing the file into each additional destination it
+declares so each top-level folder is self-contained.
 
 ### Staging cleanup
 

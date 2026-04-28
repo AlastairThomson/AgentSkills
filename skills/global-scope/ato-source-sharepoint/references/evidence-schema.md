@@ -2,7 +2,7 @@
 
 ## File naming
 
-Downloads land in `{evidence_root}/{NN-family-slug}/evidence/` with this
+Downloads land in `{evidence_root}/{NN-CF-section-slug}/evidence/` with this
 naming scheme:
 
 ```
@@ -39,21 +39,21 @@ Written to `{staging_dir}/sharepoint-citations.json`. One file per sibling run.
   "citations": [
     {
       "id_placeholder": "SP-001",
-      "cited_by": "10-security-policies/security-policies-evidence.md",
+      "cited_by": "ssp-sections/06-policies-procedures/security-policies-evidence.md",
       "location": "SSP-v2.docx",
       "link": "https://contoso.sharepoint.com/sites/ato/Shared%20Documents/Current%20ATO/SSP-v2.docx",
       "purpose": "Prior approved SSP — baseline for this revision",
-      "control_family": "10-security-policies",
-      "evidence_file": "10-security-policies/evidence/sharepoint_SSP-v2.docx"
+      "control_family": "ssp-sections/06-policies-procedures",
+      "evidence_file": "ssp-sections/06-policies-procedures/evidence/sharepoint_SSP-v2.docx"
     },
     {
       "id_placeholder": "SP-002",
-      "cited_by": "20-risk-assessment/risk-assessment-gap-analysis.md",
+      "cited_by": "ssp-sections/03-risk-assessment-report/risk-assessment-gap-analysis.md",
       "location": "POA&M-Q1-2026.xlsx",
       "link": "https://contoso.sharepoint.com/sites/ato/Shared%20Documents/POA%26M/POA%26M-Q1-2026.xlsx",
       "purpose": "Current POA&M tracking open findings",
-      "control_family": "20-risk-assessment",
-      "evidence_file": "20-risk-assessment/evidence/sharepoint_POA&M-Q1-2026.xlsx"
+      "control_family": "ssp-sections/03-risk-assessment-report",
+      "evidence_file": "ssp-sections/03-risk-assessment-report/evidence/sharepoint_POA&M-Q1-2026.xlsx"
     }
   ],
   "partial_failures": [

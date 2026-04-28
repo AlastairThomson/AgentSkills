@@ -149,17 +149,17 @@ For each configured site+folder pair, list files and filter by pattern. The
 discovery pattern table (what filenames map to which control family) lives in
 `references/discovery-patterns.md`. High-level:
 
-- `SSP*`, `*SSP*.docx`, `*System Security Plan*` → `10-security-policies`
-  (also surfaced for `01-system-design` review)
-- `POA&M*`, `*POAM*` → `20-risk-assessment`
-- `CMP*`, `*Configuration Management Plan*` → `03-configuration-management`
-- `CP*`, `*Contingency*`, `*DR*`, `*Disaster Recovery*` → `09-contingency-plan`
-- `IR*`, `*Incident Response*` → `08-incident-response`
-- `*Policy*`, `*Policies*` → `10-security-policies`
-- `*Training*` → `12-security-training`
-- `*Personnel*`, `*Background*` → `11-personnel-security`
-- `*Assessment*`, `*Audit*` → `20-risk-assessment`
-- `*Interconnection*`, `*ISA*`, `*MOU*` → `19-interconnections`
+- `SSP*`, `*SSP*.docx`, `*System Security Plan*` → `ssp-sections/06-policies-procedures`
+  (also surfaced for `ssp-sections/01-system-description` review)
+- `POA&M*`, `*POAM*` → `ssp-sections/03-risk-assessment-report`
+- `CMP*`, `*Configuration Management Plan*` → `ssp-sections/09-configuration-management-plan`
+- `CP*`, `*Contingency*`, `*DR*`, `*Disaster Recovery*` → `ssp-sections/08-contingency-plan`
+- `IR*`, `*Incident Response*` → `ssp-sections/07-incident-response-plan`
+- `*Policy*`, `*Policies*` → `ssp-sections/06-policies-procedures`
+- `*Training*` → `controls/AT-awareness-training`
+- `*Personnel*`, `*Background*` → `controls/PS-personnel-security`
+- `*Assessment*`, `*Audit*` → `ssp-sections/03-risk-assessment-report`
+- `*Interconnection*`, `*ISA*`, `*MOU*` → `ssp-sections/05-interconnections`
 
 See `references/discovery-patterns.md` for the full pattern map.
 

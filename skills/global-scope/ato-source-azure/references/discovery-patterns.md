@@ -4,22 +4,22 @@ Maps Azure services to the 20 control families.
 
 | Azure service | Primary family | Also feeds |
 |---|---|---|
-| Policy (assignments + state) | `03-configuration-management` | `20-risk-assessment` |
-| RBAC (role assignments) | `04-access-control` | `10-security-policies` |
-| Entra ID (sign-in, password policy) | `05-authentication-session` | `04-access-control` |
-| Diagnostic settings | `06-audit-logging` | — |
-| Activity Log | `06-audit-logging` | `08-incident-response` |
-| Defender for Cloud (assessments) | `07-vulnerability-management` | `20-risk-assessment` |
-| Defender for Cloud (alerts) | `08-incident-response` | — |
-| Sentinel (incidents) | `08-incident-response` | `20-risk-assessment` |
-| Backup vaults | `09-contingency-plan` | — |
-| Key Vault (metadata) | `10-security-policies` | `15-media-protection` |
-| Storage accounts (metadata) | `15-media-protection` | `16-network-communications` |
-| NSG rules | `16-network-communications` | — |
-| VNet peerings | `16-network-communications` | `19-interconnections` |
-| Private Endpoints | `16-network-communications` | `19-interconnections` |
-| ARO clusters | `17-sdlc-secure-development` | `16-network-communications` |
-| Secure Score | `20-risk-assessment` | — |
+| Policy (assignments + state) | `controls/CM-configuration-management` | `controls/RA-risk-assessment` |
+| RBAC (role assignments) | `controls/AC-access-control` | `controls/SC-system-communications-protection` |
+| Entra ID (sign-in, password policy) | `controls/IA-identification-authentication` | `controls/AC-access-control` |
+| Diagnostic settings | `controls/AU-audit-accountability` | — |
+| Activity Log | `controls/AU-audit-accountability` | `controls/IR-incident-response` |
+| Defender for Cloud (assessments) | `controls/SI-system-information-integrity` | `controls/RA-risk-assessment` |
+| Defender for Cloud (alerts) | `controls/IR-incident-response` | — |
+| Sentinel (incidents) | `controls/IR-incident-response` | `controls/RA-risk-assessment` |
+| Backup vaults | `controls/CP-contingency-planning` | — |
+| Key Vault (metadata) | `controls/SC-system-communications-protection` | `controls/MP-media-protection` |
+| Storage accounts (metadata) | `controls/MP-media-protection` | `controls/SC-system-communications-protection` |
+| NSG rules | `controls/SC-system-communications-protection` | — |
+| VNet peerings | `controls/SC-system-communications-protection` | `controls/CA-assessment-authorization` |
+| Private Endpoints | `controls/SC-system-communications-protection` | `controls/CA-assessment-authorization` |
+| ARO clusters | `controls/SA-system-services-acquisition` | `controls/SC-system-communications-protection` |
+| Secure Score | `controls/RA-risk-assessment` | — |
 
 ## Citation granularity
 

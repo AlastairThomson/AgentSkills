@@ -1,33 +1,47 @@
 # Artifact Mappings Reference
 
-This reference maps each of the 20 NIST 800-53 artifact sections to specific file
-patterns, code patterns, and search strategies for discovering evidence in a repository.
+This reference maps each NIST 800-53 artifact area — SSP-section
+documents and per-control-family implementation evidence — to specific
+file patterns, code patterns, and search strategies for discovering
+evidence in a repository.
+
+The numbering below preserves the original section order for backward
+compatibility with existing site-specific runbooks. The orchestrator's
+**Step 4 routing table** in `agent.md` is the authoritative mapping
+from these areas to the new `ssp-sections/<NN>-<slug>/` and
+`controls/<CF>-<slug>/evidence/<CONTROL-ID>/` paths. The `Routes to`
+column on each section header below summarises that routing.
 
 ## Table of Contents
-1. [System Design Document](#1-system-design-document)
-2. [System Inventory](#2-system-inventory)
-3. [Configuration Management Plan](#3-configuration-management-plan)
-4. [Access Control & Account Management](#4-access-control--account-management)
-5. [Authentication & Session Configuration](#5-authentication--session-configuration)
-6. [Audit Logging & Monitoring](#6-audit-logging--monitoring)
-7. [Vulnerability & Patch Management](#7-vulnerability--patch-management)
-8. [Incident Response Plan](#8-incident-response-plan)
-9. [Contingency Plan](#9-contingency-plan)
-10. [Security Policies & Procedures](#10-security-policies--procedures)
-11. [Personnel Security Records](#11-personnel-security-records)
-12. [Security Awareness & Training](#12-security-awareness--training)
-13. [System Maintenance Records](#13-system-maintenance-records)
-14. [Physical & Environmental Protection](#14-physical--environmental-protection)
-15. [Media Protection Records](#15-media-protection-records)
-16. [Network & Communications Security](#16-network--communications-security)
-17. [SDLC & Secure Development](#17-sdlc--secure-development)
-18. [Supply Chain Risk Management](#18-supply-chain-risk-management)
-19. [Interconnection & External Services](#19-interconnection--external-services)
-20. [Risk Assessment & Categorization](#20-risk-assessment--categorization)
+1. [System Design Document](#1-pl--system-design-document) → `ssp-sections/01-system-description/`
+2. [System Inventory](#2-cm--system-inventory) → `ssp-sections/02-system-inventory/` + `controls/CM-configuration-management/evidence/CM-8/`
+3. [Configuration Management Plan](#3-cm--configuration-management-plan) → `ssp-sections/09-configuration-management-plan/` + `controls/CM-configuration-management/`
+4. [Access Control & Account Management](#4-ac--access-control--account-management) → `controls/AC-access-control/`
+5. [Authentication & Session Configuration](#5-ia--authentication--session-configuration) → `controls/IA-identification-authentication/`
+6. [Audit Logging & Monitoring](#6-au--audit-logging--monitoring) → `controls/AU-audit-accountability/`
+7. [Vulnerability & Patch Management](#7-si--vulnerability--patch-management) → `ssp-sections/10-vulnerability-mgmt-plan/` + `controls/SI-system-information-integrity/` + `controls/RA-risk-assessment/evidence/RA-5/`
+8. [Incident Response Plan](#8-ir--incident-response-plan) → `ssp-sections/07-incident-response-plan/` + `controls/IR-incident-response/`
+9. [Contingency Plan](#9-cp--contingency-plan) → `ssp-sections/08-contingency-plan/` + `controls/CP-contingency-planning/`
+10. [Security Policies & Procedures](#10-pl--security-policies--procedures) → `ssp-sections/06-policies-procedures/` + every `controls/<CF>/evidence/<CF>-1/`
+11. [Personnel Security Records](#11-ps--personnel-security-records) → `controls/PS-personnel-security/`
+12. [Security Awareness & Training](#12-at--security-awareness--training) → `controls/AT-awareness-training/`
+13. [System Maintenance Records](#13-ma--system-maintenance-records) → `controls/MA-maintenance/`
+14. [Physical & Environmental Protection](#14-pe--physical--environmental-protection) → `controls/PE-physical-environmental/`
+15. [Media Protection Records](#15-mp--media-protection-records) → `controls/MP-media-protection/`
+16. [Network & Communications Security](#16-sc--network--communications-security) → `controls/SC-system-communications-protection/`
+17. [SDLC & Secure Development](#17-sa--sdlc--secure-development) → `ssp-sections/11-sdlc-document/` + `controls/SA-system-services-acquisition/`
+18. [Supply Chain Risk Management](#18-sr--supply-chain-risk-management) → `ssp-sections/12-supply-chain-risk-mgmt-plan/` + `controls/SR-supply-chain-risk-management/`
+19. [Interconnection & External Services](#19-ca--interconnection--external-services) → `ssp-sections/05-interconnections/` + `controls/CA-assessment-authorization/`
+20. [Risk Assessment & Categorization](#20-ra--risk-assessment--categorization) → `ssp-sections/03-risk-assessment-report/` + `controls/RA-risk-assessment/`
+21. [POA&M (Plan of Action & Milestones)](#21-poam) → `ssp-sections/04-poam/` + `controls/CA-assessment-authorization/evidence/CA-5/`
+22. [Continuous Monitoring Plan](#22-ca--continuous-monitoring-plan) → `ssp-sections/13-continuous-monitoring-plan/` + `controls/CA-assessment-authorization/evidence/CA-7/`
+23. [Privacy Impact Assessment / SORN](#23-pt--privacy-impact-assessment) → `ssp-sections/14-privacy-impact-assessment/` + `controls/PT-pii-processing-transparency/`
+24. [Program Management evidence](#24-pm--program-management) → `controls/PM-program-management/`
+25. [Planning controls (separate from policy docs)](#25-pl--planning-controls) → `controls/PL-planning/`
 
 ---
 
-## 1. System Design Document
+## 1. PL — System Design Document
 
 ### File patterns
 ```
@@ -75,7 +89,7 @@ config/saml/**, **/oauth/**, **/oidc/**
 
 ---
 
-## 2. System Inventory
+## 2. CM — System Inventory
 
 ### File patterns
 ```
@@ -139,7 +153,7 @@ openshift/**/*.yaml
 
 ---
 
-## 3. Configuration Management Plan
+## 3. CM — Configuration Management Plan
 
 ### File patterns
 ```
@@ -182,7 +196,7 @@ Grep: "STIG", "CIS", "USGCB", "hardening", "benchmark"
 
 ---
 
-## 4. Access Control & Account Management
+## 4. AC — Access Control & Account Management
 
 ### File patterns
 ```
@@ -224,7 +238,7 @@ Grep: "separation.*duties", "dual.*control", "segregat"
 
 ---
 
-## 5. Authentication & Session Configuration
+## 5. IA — Authentication & Session Configuration
 
 ### File patterns
 ```
@@ -274,7 +288,7 @@ Grep: "piv", "cac", "smart.*card", "x509.*client"
 
 ---
 
-## 6. Audit Logging & Monitoring
+## 6. AU — Audit Logging & Monitoring
 
 ### File patterns
 ```
@@ -314,7 +328,7 @@ Grep: "log.*permission", "log.*access.*control", "log.*encrypt"
 
 ---
 
-## 7. Vulnerability & Patch Management
+## 7. SI — Vulnerability & Patch Management
 
 ### File patterns
 ```
@@ -359,7 +373,7 @@ Grep: "file.*integrity", "tripwire", "aide", "ossec", "wazuh"
 
 ---
 
-## 8. Incident Response Plan
+## 8. IR — Incident Response Plan
 
 ### File patterns
 ```
@@ -388,7 +402,7 @@ Grep: "breach", "compromise", "forensic"
 
 ---
 
-## 9. Contingency Plan
+## 9. CP — Contingency Plan
 
 ### File patterns
 ```
@@ -424,7 +438,7 @@ Grep: "availability.*zone", "multi.*az", "cross.*region"
 
 ---
 
-## 10. Security Policies & Procedures
+## 10. PL — Security Policies & Procedures
 
 ### File patterns
 ```
@@ -451,7 +465,7 @@ For each of the 20 control families (AC, AT, AU, CA, CM, CP, IA, IR, MA, MP, PE,
 
 ---
 
-## 11. Personnel Security Records
+## 11. PS — Personnel Security Records
 
 Typically OPERATIONAL — not in code repos.
 
@@ -474,7 +488,7 @@ docs/**/offboarding*.*, docs/**/background*.*
 
 ---
 
-## 12. Security Awareness & Training
+## 12. AT — Security Awareness & Training
 
 Typically OPERATIONAL — not in code repos.
 
@@ -494,7 +508,7 @@ docs/**/security-training*.*
 
 ---
 
-## 13. System Maintenance Records
+## 13. MA — System Maintenance Records
 
 ### File patterns
 ```
@@ -519,7 +533,7 @@ git log (recent maintenance activities)
 
 ---
 
-## 14. Physical & Environmental Protection
+## 14. PE — Physical & Environmental Protection
 
 Typically INHERITED for cloud-hosted systems.
 
@@ -542,7 +556,7 @@ docs/**/facility*.md, docs/**/data-center*.*
 
 ---
 
-## 15. Media Protection Records
+## 15. MP — Media Protection Records
 
 ### File patterns
 ```
@@ -566,7 +580,7 @@ Grep: "usb", "removable.*media", "external.*storage"
 
 ---
 
-## 16. Network & Communications Security
+## 16. SC — Network & Communications Security
 
 ### File patterns
 ```
@@ -625,7 +639,7 @@ Grep: "stack.*trace", "debug.*mode", "CI_DEBUG"
 
 ---
 
-## 17. SDLC & Secure Development
+## 17. SA — SDLC & Secure Development
 
 ### File patterns
 ```
@@ -669,7 +683,7 @@ Grep: "bug", "defect", "vulnerability", "security.*issue"
 
 ---
 
-## 18. Supply Chain Risk Management
+## 18. SR — Supply Chain Risk Management
 
 ### File patterns
 ```
@@ -701,7 +715,7 @@ Grep: "vendor.*assessment", "supply.*chain", "third.*party.*risk"
 
 ---
 
-## 19. Interconnection & External Services
+## 19. CA — Interconnection & External Services
 
 ### File patterns
 ```
@@ -732,7 +746,7 @@ docker-compose.yml (external service dependencies)
 
 ---
 
-## 20. Risk Assessment & Categorization
+## 20. RA — Risk Assessment & Categorization
 
 ### File patterns
 ```
@@ -756,3 +770,153 @@ Grep: "low.*moderate.*high", "risk.*assess"
 - [ ] Risk response documentation
 - [ ] Risk results reported to management
 - [ ] Continuous monitoring plan
+
+---
+
+## 21. POA&M
+
+### File patterns
+```
+docs/**/poam*.md, docs/**/poa-m*.*, docs/**/poam.xlsx
+docs/**/findings*.md, docs/**/open-findings*.*
+.github/issues/**, gh issue list (security-labelled tickets)
+```
+
+### Sub-items to check
+- [ ] Open findings inventory with target dates
+- [ ] Risk acceptance records for deferred findings
+- [ ] Status updates for in-progress remediations
+- [ ] Closed-finding evidence trail
+- [ ] CA-5 milestone schedule
+
+Routes to: `ssp-sections/04-poam/` + `controls/CA-assessment-authorization/evidence/CA-5/`
+
+---
+
+## 22. CA — Continuous Monitoring Plan
+
+### File patterns
+```
+docs/**/conmon*.md, docs/**/continuous-monitoring*.*
+docs/**/iscm*.*, docs/**/monitoring-strategy*.*
+.github/workflows/*-monitoring.yml, .github/workflows/*-conmon.yml
+```
+
+### Code patterns for generation
+```
+# Cadence and scope evidence
+Grep: "monthly.*scan", "quarterly.*review", "annual.*assessment"
+Grep: "metric", "kpi", "control.*sampling"
+
+# Reporting workflow
+Grep: "report.*to.*ao", "monitoring.*report", "risk.*dashboard"
+```
+
+### Sub-items to check
+- [ ] Documented monitoring strategy
+- [ ] Control sampling plan and frequency
+- [ ] Metrics with thresholds
+- [ ] Reporting cadence to AO and stakeholders
+- [ ] Trigger conditions for ad-hoc assessment
+
+Routes to: `ssp-sections/13-continuous-monitoring-plan/` + `controls/CA-assessment-authorization/evidence/CA-7/`
+
+---
+
+## 23. PT — Privacy Impact Assessment
+
+### File patterns
+```
+docs/**/pia*.*, docs/**/sorn*.*, docs/**/privacy*.md
+docs/**/pii-inventory*.*, docs/**/data-classification*.*
+**/privacy-policy*.*, **/cookie-policy*.*
+```
+
+### Code patterns for generation
+```
+# PII handling
+Grep: "pii", "personal.*data", "personal.*information"
+Grep: "ssn", "date.*of.*birth", "email.*address" (in column / field names only — never log values)
+Grep: "encrypt.*at.*rest", "redact", "mask"
+
+# Consent + transparency
+Grep: "consent", "opt.*in", "opt.*out", "data.*subject"
+```
+
+### Sub-items to check
+- [ ] PIA / Privacy Threshold Analysis filed
+- [ ] SORN published (federal systems with Privacy Act records)
+- [ ] PII inventory with data flows
+- [ ] Consent collection mechanism (PT-2)
+- [ ] Data minimisation evidence (PT-3)
+- [ ] Privacy notice on user-facing surfaces (PT-5)
+- [ ] Data retention/disposition policy (PT-6, SI-12)
+
+Routes to: `ssp-sections/14-privacy-impact-assessment/` + `controls/PT-pii-processing-transparency/`
+
+---
+
+## 24. PM — Program Management
+
+### File patterns
+```
+docs/**/program-management*.*, docs/**/security-program*.*
+docs/**/pm-*.md
+docs/**/governance*.*, docs/**/security-roles*.*
+```
+
+### Code patterns for generation
+```
+# Program-level governance
+Grep: "ciso", "cso", "security.*officer", "isso", "issm"
+Grep: "risk.*tolerance", "executive.*risk", "governance.*board"
+.github/CODEOWNERS (security-team ownership lines)
+```
+
+### Sub-items to check
+- [ ] Information security program plan (PM-1)
+- [ ] Senior agency information security officer (PM-2)
+- [ ] Information-security workforce (PM-13)
+- [ ] Information-security measures of performance (PM-6)
+- [ ] Enterprise architecture (PM-7)
+- [ ] Critical infrastructure plan (PM-8)
+- [ ] Risk management strategy (PM-9)
+- [ ] Authorization process (PM-10)
+- [ ] Mission/business process definition (PM-11)
+- [ ] Insider threat program (PM-12)
+- [ ] Testing, training, and monitoring (PM-14)
+
+Routes to: `controls/PM-program-management/`. Most PM evidence is
+program-level, organisation-wide — typically OPERATIONAL gaps that
+the development team can't close.
+
+---
+
+## 25. PL — Planning Controls
+
+> **Note**: This is the controls-level companion to Section 10
+> (Security Policies & Procedures). PL-1 (policy) lives there; PL-2
+> (system security plan), PL-4 (rules of behavior), PL-7 (concept of
+> operations), PL-8 (security and privacy architectures), PL-9
+> (central management), PL-10 (baseline selection), PL-11 (baseline
+> tailoring) live here.
+
+### File patterns
+```
+docs/**/ssp*.*, docs/**/system-security-plan*.*
+docs/**/rules-of-behavior*.*, docs/**/rob*.md
+docs/**/conops*.md, docs/**/concept-of-operations*.*
+docs/**/architecture*.md, docs/**/security-architecture*.*
+docs/**/baseline*.md
+```
+
+### Sub-items to check
+- [ ] System Security Plan (PL-2) — full SSP document
+- [ ] Rules of Behavior (PL-4) — signed by all users
+- [ ] Concept of Operations (PL-7)
+- [ ] Security and Privacy Architectures (PL-8)
+- [ ] Baseline Selection (PL-10) — LOW/MOD/HIGH per FIPS-199
+- [ ] Baseline Tailoring (PL-11) — additions and removals justified
+
+Routes to: `controls/PL-planning/`. The SSP itself also lives in
+`ssp-sections/01-system-description/` — copy where applicable.

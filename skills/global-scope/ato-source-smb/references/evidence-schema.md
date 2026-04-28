@@ -2,7 +2,7 @@
 
 ## File naming
 
-Copied files land in `{evidence_root}/{NN-family-slug}/evidence/` with:
+Copied files land in `{evidence_root}/{NN-CF-section-slug}/evidence/` with:
 
 ```
 smb_{original-filename}
@@ -29,12 +29,12 @@ smb_dr-runbooks__SSP.docx
   "citations": [
     {
       "id_placeholder": "SMB-001",
-      "cited_by": "09-contingency-plan/contingency-plan-evidence.md",
+      "cited_by": "ssp-sections/08-contingency-plan/contingency-plan-evidence.md",
       "location": "//fileserver.corp/ato/Current/DR-runbook.pdf",
       "link": "smb://fileserver.corp/ato/Current/DR-runbook.pdf",
       "purpose": "Disaster recovery runbook — current approved version",
-      "control_family": "09-contingency-plan",
-      "evidence_file": "09-contingency-plan/evidence/smb_DR-runbook.pdf"
+      "control_family": "ssp-sections/08-contingency-plan",
+      "evidence_file": "ssp-sections/08-contingency-plan/evidence/smb_DR-runbook.pdf"
     }
   ],
   "partial_failures": [

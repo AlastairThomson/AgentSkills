@@ -11,26 +11,26 @@ Pattern matching is case-insensitive.
 
 | Family | Filename patterns | Notes |
 |---|---|---|
-| `01-system-design` | `*SDD*`, `*System Design*`, `*Architecture*`, `*HLA*`, `*LLA*` | Also pull SSP for design sections |
-| `02-system-inventory` | `*Inventory*`, `*CMDB*`, `*Asset List*`, `*Component List*` | |
-| `03-configuration-management` | `*CMP*`, `*Configuration Management Plan*`, `*Baseline*`, `*Hardening*` | |
-| `04-access-control` | `*Access Control*`, `*RBAC*`, `*Role Matrix*`, `*Access Request*` | |
-| `05-authentication-session` | `*Authentication*`, `*MFA*`, `*Session*`, `*Password Policy*` | |
-| `06-audit-logging` | `*Audit*`, `*Logging*`, `*Log Retention*`, `*SIEM*` | Exclude "audit findings" → those go to risk-assessment |
-| `07-vulnerability-management` | `*Vulnerability*`, `*Patch*`, `*Scan Report*`, `*POA&M*` | POA&M also goes to risk-assessment |
-| `08-incident-response` | `*IR*`, `*Incident Response*`, `*IRP*`, `*Playbook*` | |
-| `09-contingency-plan` | `*CP*`, `*Contingency*`, `*DR*`, `*Disaster Recovery*`, `*BCP*` | |
-| `10-security-policies` | `*Policy*`, `*Policies*`, `*SSP*`, `*System Security Plan*` | |
-| `11-personnel-security` | `*Personnel*`, `*Background Check*`, `*Clearance*`, `*Onboarding*` | |
-| `12-security-training` | `*Training*`, `*Awareness*`, `*Education*` | |
-| `13-system-maintenance` | `*Maintenance*`, `*Patch Schedule*`, `*Change Log*` | |
-| `14-physical-environmental` | `*Physical*`, `*Facility*`, `*Datacenter*`, `*Environmental*` | |
-| `15-media-protection` | `*Media*`, `*Sanitization*`, `*Disposal*` | |
-| `16-network-communications` | `*Network*`, `*Topology*`, `*Firewall*`, `*TLS*`, `*VPN*` | |
-| `17-sdlc-secure-development` | `*SDLC*`, `*Secure Development*`, `*Code Review*`, `*SAST*` | |
-| `18-supply-chain` | `*Supply Chain*`, `*SBOM*`, `*Vendor*`, `*Third Party*` | |
-| `19-interconnections` | `*Interconnection*`, `*ISA*`, `*MOU*`, `*Data Sharing Agreement*` | |
-| `20-risk-assessment` | `*Risk Assessment*`, `*RA*`, `*POA&M*`, `*Audit Findings*`, `*Assessment Report*` | |
+| `ssp-sections/01-system-description` | `*SDD*`, `*System Design*`, `*Architecture*`, `*HLA*`, `*LLA*` | Also pull SSP for design sections |
+| `ssp-sections/02-system-inventory` | `*Inventory*`, `*CMDB*`, `*Asset List*`, `*Component List*` | |
+| `ssp-sections/09-configuration-management-plan` | `*CMP*`, `*Configuration Management Plan*`, `*Baseline*`, `*Hardening*` | |
+| `controls/AC-access-control` | `*Access Control*`, `*RBAC*`, `*Role Matrix*`, `*Access Request*` | |
+| `controls/IA-identification-authentication` | `*Authentication*`, `*MFA*`, `*Session*`, `*Password Policy*` | |
+| `controls/AU-audit-accountability` | `*Audit*`, `*Logging*`, `*Log Retention*`, `*SIEM*` | Exclude "audit findings" → those go to risk-assessment |
+| `ssp-sections/10-vulnerability-mgmt-plan` | `*Vulnerability*`, `*Patch*`, `*Scan Report*`, `*POA&M*` | POA&M also goes to risk-assessment |
+| `ssp-sections/07-incident-response-plan` | `*IR*`, `*Incident Response*`, `*IRP*`, `*Playbook*` | |
+| `ssp-sections/08-contingency-plan` | `*CP*`, `*Contingency*`, `*DR*`, `*Disaster Recovery*`, `*BCP*` | |
+| `ssp-sections/06-policies-procedures` | `*Policy*`, `*Policies*`, `*SSP*`, `*System Security Plan*` | |
+| `controls/PS-personnel-security` | `*Personnel*`, `*Background Check*`, `*Clearance*`, `*Onboarding*` | |
+| `controls/AT-awareness-training` | `*Training*`, `*Awareness*`, `*Education*` | |
+| `controls/MA-maintenance` | `*Maintenance*`, `*Patch Schedule*`, `*Change Log*` | |
+| `controls/PE-physical-environmental` | `*Physical*`, `*Facility*`, `*Datacenter*`, `*Environmental*` | |
+| `controls/MP-media-protection` | `*Media*`, `*Sanitization*`, `*Disposal*` | |
+| `controls/SC-system-communications-protection` | `*Network*`, `*Topology*`, `*Firewall*`, `*TLS*`, `*VPN*` | |
+| `ssp-sections/11-sdlc-document` | `*SDLC*`, `*Secure Development*`, `*Code Review*`, `*SAST*` | |
+| `ssp-sections/12-supply-chain-risk-mgmt-plan` | `*Supply Chain*`, `*SBOM*`, `*Vendor*`, `*Third Party*` | |
+| `ssp-sections/05-interconnections` | `*Interconnection*`, `*ISA*`, `*MOU*`, `*Data Sharing Agreement*` | |
+| `ssp-sections/03-risk-assessment-report` | `*Risk Assessment*`, `*RA*`, `*POA&M*`, `*Audit Findings*`, `*Assessment Report*` | |
 
 ## Multi-family files
 
@@ -38,10 +38,10 @@ These filename shapes typically belong in multiple families:
 
 | Filename shape | Families |
 |---|---|
-| `SSP*.docx` | `10-security-policies` (primary), `01-system-design`, `04-access-control`, `05-authentication-session` |
-| `POA&M*.xlsx` | `07-vulnerability-management`, `20-risk-assessment` |
+| `SSP*.docx` | `ssp-sections/06-policies-procedures` (primary), `ssp-sections/01-system-description`, `controls/AC-access-control`, `controls/IA-identification-authentication` |
+| `POA&M*.xlsx` | `ssp-sections/10-vulnerability-mgmt-plan`, `ssp-sections/03-risk-assessment-report` |
 | `ATO Package*` | all 20 — treat as an archive, inventory rather than download |
-| `Risk Assessment*.docx` | `20-risk-assessment`, `07-vulnerability-management` |
+| `Risk Assessment*.docx` | `ssp-sections/03-risk-assessment-report`, `ssp-sections/10-vulnerability-mgmt-plan` |
 
 ## File types
 

@@ -10,7 +10,7 @@ az account show
 az account list
 ```
 
-## Policy → 03-configuration-management
+## Policy → controls/CM-configuration-management
 
 ### Inventory
 
@@ -35,7 +35,7 @@ az policy set-definition show --name {setName} --subscription {id}
 az policy set-definition show --name {setName}               # built-in
 ```
 
-## RBAC → 04-access-control
+## RBAC → controls/AC-access-control
 
 ### Inventory
 
@@ -70,21 +70,21 @@ If any of these returns `Forbidden`, record `principal_resolution: denied`
 in the digest and continue. The `principalId` itself is enough evidence
 to identify the assignment; the display name is a nicety.
 
-## Entra ID → 05-authentication-session
+## Entra ID → controls/IA-identification-authentication
 
 ```bash
 az ad signed-in-user show
 # User enumeration is deliberately not attempted — scope-creep risk.
 ```
 
-## Diagnostic settings & activity log → 06-audit-logging
+## Diagnostic settings & activity log → controls/AU-audit-accountability
 
 ```bash
 az monitor diagnostic-settings list --resource {resourceId}
 az monitor activity-log list --max-events 500 --offset 30d
 ```
 
-## Defender for Cloud → 07-vulnerability-management / 08-incident-response
+## Defender for Cloud → controls/SI-system-information-integrity / controls/IR-incident-response
 
 ```bash
 az security assessment list --subscription {id}
@@ -94,7 +94,7 @@ az security secure-scores list --subscription {id}
 az security secure-score-controls list --subscription {id}
 ```
 
-## Key Vault → 10-security-policies (metadata only)
+## Key Vault → controls/SC-system-communications-protection (metadata only)
 
 ```bash
 az keyvault list --subscription {id}
@@ -105,7 +105,7 @@ az keyvault network-rule list --name {name} --subscription {id}
 # FORBIDDEN: az keyvault certificate show --include-private
 ```
 
-## Network → 16-network-communications
+## Network → controls/SC-system-communications-protection
 
 ```bash
 az network vnet list
@@ -116,7 +116,7 @@ az network private-endpoint list
 az network flow-log list
 ```
 
-## ARO → 17-sdlc-secure-development
+## ARO → controls/SA-system-services-acquisition
 
 ```bash
 az aro list --subscription {id}

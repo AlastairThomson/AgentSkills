@@ -177,13 +177,13 @@ For each service in scope, run the discovery commands from
 
 | Service | Family | Key calls |
 |---|---|---|
-| IAM | `04-access-control` | `iam list-users`, `list-roles`, `list-policies`, `get-account-summary`, `generate-credential-report` |
-| Config | `03-configuration-management` | `configservice describe-config-rules`, `describe-compliance-by-config-rule` |
-| CloudTrail | `06-audit-logging` | `cloudtrail describe-trails`, `get-trail-status`, `get-event-selectors` |
-| Security Hub | `20-risk-assessment` | `securityhub get-findings --max-items 500` (summary only) |
-| GuardDuty | `08-incident-response` | `guardduty list-detectors`, `get-detector`, `list-findings --max-items 500` |
-| S3 | `15-media-protection` | `s3api list-buckets`, `get-bucket-policy`, `get-bucket-encryption` for in-scope buckets |
-| KMS | `10-security-policies` (crypto) | `kms list-keys`, `describe-key`, `list-aliases` |
+| IAM | `controls/AC-access-control` | `iam list-users`, `list-roles`, `list-policies`, `get-account-summary`, `generate-credential-report` |
+| Config | `controls/CM-configuration-management` | `configservice describe-config-rules`, `describe-compliance-by-config-rule` |
+| CloudTrail | `controls/AU-audit-accountability` | `cloudtrail describe-trails`, `get-trail-status`, `get-event-selectors` |
+| Security Hub | `controls/RA-risk-assessment` | `securityhub get-findings --max-items 500` (summary only) |
+| GuardDuty | `controls/IR-incident-response` | `guardduty list-detectors`, `get-detector`, `list-findings --max-items 500` |
+| S3 | `controls/MP-media-protection` | `s3api list-buckets`, `get-bucket-policy`, `get-bucket-encryption` for in-scope buckets |
+| KMS | `controls/SC-system-communications-protection` (crypto) | `kms list-keys`, `describe-key`, `list-aliases` |
 
 See the cheatsheet for exact command forms, required flags, and output
 handling.
@@ -193,11 +193,11 @@ handling.
 JSON exports go to `{evidence_root}/{family}/evidence/aws_{service}-{artifact}.json`.
 Examples:
 
-- `04-access-control/evidence/aws_iam-account-summary.json`
-- `04-access-control/evidence/aws_iam-roles.json`
-- `03-configuration-management/evidence/aws_config-compliance.json`
-- `06-audit-logging/evidence/aws_cloudtrail-trails.json`
-- `20-risk-assessment/evidence/aws_securityhub-findings-summary.json`
+- `controls/AC-access-control/evidence/aws_iam-account-summary.json`
+- `controls/AC-access-control/evidence/aws_iam-roles.json`
+- `controls/CM-configuration-management/evidence/aws_config-compliance.json`
+- `controls/AU-audit-accountability/evidence/aws_cloudtrail-trails.json`
+- `controls/RA-risk-assessment/evidence/aws_securityhub-findings-summary.json`
 
 **Secret scan before writing**: if a JSON blob contains a field matching
 `password`, `secret`, `token`, `private_key`, `access_key` (case-insensitive),
