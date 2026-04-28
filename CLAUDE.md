@@ -24,7 +24,7 @@ install.sh           # per-CLI installer with --for <cli>[,<cli>...]
 CLAUDE.md            # this file
 ```
 
-**Scope-selection rule.** A skill or agent belongs in `global-scope/` if it works usefully on any repo regardless of language (`deep-review`, `branch-review`, `bdd-audit`, `coverage-audit`, `repo-health`, `merge-sprint`, `skill-sync`, `skill-interview`, the ATO orchestrator + sources, `auth-*`). It belongs in `repo-scope/` if it is meaningful only when a specific toolchain or target is present (language preflights, testing guides, `preflight` dispatcher, `deploy-app` + siblings, `ios-app-template-conventions`).
+**Scope-selection rule.** A skill or agent belongs in `global-scope/` if it works usefully on any repo regardless of language (`deep-review`, `branch-review`, `bdd-audit`, `coverage-audit`, `repo-health`, `merge-sprint`, `skill-sync`, `skill-interview`, the ATO orchestrator + sources + remediation guidance, `auth-*`). It belongs in `repo-scope/` if it is meaningful only when a specific toolchain or target is present (language preflights, testing guides, `preflight` dispatcher, `deploy-app` + siblings, `ios-app-template-conventions`).
 
 A paired stub and agent live in matching scopes — if the stub is global, the agent is too.
 
@@ -152,14 +152,16 @@ Every directory under `skills/` or `agents/` is a **generic** artifact — safe 
 
 ## ATO orchestrator + sibling pattern
 
-The ATO orchestrator lives as an **agent** at `agents/base/global-scope/ato-artifact-collector/`, fronted by a thin stub skill at `skills/global-scope/ato-artifact-collector/`. The four `ato-source-*` **skills** (under `skills/global-scope/`) are invoked by the agent via the Skill tool when the user enables the corresponding external scope (AWS, Azure, SharePoint/M365, SMB shares). The full hand-off contract is documented in `agents/base/global-scope/ato-artifact-collector/references/sibling-contract.md` — read it before editing any sibling. Invariants the siblings all share:
+The ATO orchestrator lives as an **agent** at `agents/base/global-scope/ato-artifact-collector/`, fronted by a thin stub skill at `skills/global-scope/ato-artifact-collector/`. The four read-only `ato-source-*` **skills** and the on-demand `ato-remediation-guidance` skill (all under `skills/global-scope/`) are invoked by the agent via the Skill tool. The four sources run when the user enables the corresponding external scope (AWS, Azure, SharePoint/M365, SMB shares); `ato-remediation-guidance` runs only when the user explicitly asks for a developer-facing punch list after the package is produced. The full hand-off contract for the four sources is documented in `agents/base/global-scope/ato-artifact-collector/references/sibling-contract.md` — read it before editing any source sibling. Invariants the source siblings all share:
 
 - **Read-only.** No `create-*`, `put-*`, `delete-*`, `modify-*`, or any write verb. If asked to remediate, refuse and escalate.
 - **Ambient auth only.** Siblings never store credentials, never call `aws configure`, never touch `~/.aws/credentials` etc. They use whatever session the user already established via the native tool.
 - **Scope-confirmed in-session.** Each sibling re-confirms its scope before making external calls; the orchestrator does not bypass that prompt.
 - **Graceful degradation.** If a sibling fails (auth missing, scope declined), the orchestrator records the failure and continues with remaining sources. Repo-only runs are a first-class mode.
 
-Siblings write evidence into `docs/ato-package/{NN-family-slug}/evidence/` with source-prefixed filenames (`aws_*`, `azure_*`, `sharepoint_*`, `smb_*`) and citation batches into `docs/ato-package/.staging/{source}-citations.json`.
+Source siblings write evidence into one of two top-level branches under `docs/ato-package/`: `ssp-sections/<NN>-<slug>/evidence/<source>_<file>` for document-shaped artifacts (the SSP body, IRP, CP, CMP, ConMon plan, ISA/MOU, POA&M, etc.) or `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<source>_<file>` for per-control implementation evidence (an IAM role for AC-2, an NSG rule for SC-7, a CloudTrail config for AU-2, etc.). `<NN>` is the SSP-section ordinal (01–14), `<CF>` is the two-letter NIST 800-53 Rev 5 control-family code (all 20 always present: AC, AT, AU, CA, CM, CP, IA, IR, MA, MP, PE, PL, PM, PS, PT, RA, SA, SC, SI, SR), and `<CONTROL-ID>` is the specific control or enhancement (`AC-2`, `AC-2(4)`). Citation batches go to `docs/ato-package/.staging/{source}-citations.json`. The canonical SSP-section + family table and the old-slug → new-path migration map live in `agents/base/global-scope/ato-artifact-collector/agent.md` under "File naming convention".
+
+`ato-remediation-guidance` is read-only on the existing package and writes exactly one new file (`docs/ato-package/REMEDIATION_GUIDANCE.md`). It is not part of the default 8-step workflow and shares none of the source-sibling auth or scope-confirmation flow — its only inputs are the package on disk and the working repo.
 
 ## Editing conventions
 

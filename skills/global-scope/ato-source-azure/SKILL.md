@@ -203,16 +203,16 @@ Per family:
 
 | Family | Az commands |
 |---|---|
-| `03-configuration-management` | `az policy assignment list`, `az policy state summarize` |
-| `04-access-control` | `az role assignment list --all`, `az role definition list --custom-role-only` |
-| `05-authentication-session` | `az ad signed-in-user show`, `az ad user list --filter` (limited) |
-| `06-audit-logging` | `az monitor diagnostic-settings list`, `az monitor activity-log list --max-events 500` |
-| `07-vulnerability-management` | `az security assessment list` (Defender for Cloud), `az security sub-assessment list` |
-| `08-incident-response` | `az security alert list`, `az sentinel incident list` (if Sentinel workspace exists) |
-| `10-security-policies` (KV) | `az keyvault list`, `az keyvault show` (metadata only — never `secret show`) |
-| `16-network-communications` | `az network nsg list`, `az network nsg rule list`, `az network vnet list`, `az network vnet peering list` |
-| `17-sdlc-secure-development` | ARO cluster configs if present: `az aro list`, `az aro show` |
-| `20-risk-assessment` | `az security secure-score controls list`, `az security secure-scores list` |
+| `controls/CM-configuration-management` | `az policy assignment list`, `az policy state summarize` |
+| `controls/AC-access-control` | `az role assignment list --all`, `az role definition list --custom-role-only` |
+| `controls/IA-identification-authentication` | `az ad signed-in-user show`, `az ad user list --filter` (limited) |
+| `controls/AU-audit-accountability` | `az monitor diagnostic-settings list`, `az monitor activity-log list --max-events 500` |
+| `controls/SI-system-information-integrity` | `az security assessment list` (Defender for Cloud), `az security sub-assessment list` |
+| `controls/IR-incident-response` | `az security alert list`, `az sentinel incident list` (if Sentinel workspace exists) |
+| `controls/SC-system-communications-protection` (KV) | `az keyvault list`, `az keyvault show` (metadata only — never `secret show`) |
+| `controls/SC-system-communications-protection` | `az network nsg list`, `az network nsg rule list`, `az network vnet list`, `az network vnet peering list` |
+| `controls/SA-system-services-acquisition` | ARO cluster configs if present: `az aro list`, `az aro show` |
+| `controls/RA-risk-assessment` | `az security secure-score controls list`, `az security secure-scores list` |
 
 Exact command forms and flags live in `references/az-cli-cheatsheet.md`.
 
@@ -222,12 +222,12 @@ JSON exports land in
 `{evidence_root}/{family}/evidence/azure_{service}-{artifact}.json`.
 
 Examples:
-- `03-configuration-management/evidence/azure_policy-assignments.json`
-- `03-configuration-management/evidence/azure_policy-compliance.json`
-- `04-access-control/evidence/azure_role-assignments.json`
-- `16-network-communications/evidence/azure_nsg-rules.json`
-- `07-vulnerability-management/evidence/azure_defender-assessments.json`
-- `20-risk-assessment/evidence/azure_secure-score.json`
+- `controls/CM-configuration-management/evidence/azure_policy-assignments.json`
+- `controls/CM-configuration-management/evidence/azure_policy-compliance.json`
+- `controls/AC-access-control/evidence/azure_role-assignments.json`
+- `controls/SC-system-communications-protection/evidence/azure_nsg-rules.json`
+- `controls/SI-system-information-integrity/evidence/azure_defender-assessments.json`
+- `controls/RA-risk-assessment/evidence/azure_secure-score.json`
 
 **Never export Key Vault secret values.** `az keyvault secret show`,
 `secret list`, `key show`, `certificate show` (with `--include-private`),

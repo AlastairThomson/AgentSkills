@@ -61,7 +61,7 @@ m365 spo file get \
   --webUrl "https://contoso.sharepoint.com/sites/ato" \
   --url "/sites/ato/Shared Documents/Current ATO/SSP-v2.docx" \
   --asFile \
-  --path "docs/ato-package/10-security-policies/evidence/sharepoint_SSP-v2.docx"
+  --path "docs/ato-package/ssp-sections/06-policies-procedures/evidence/sharepoint_SSP-v2.docx"
 ```
 
 `--asFile` writes the binary content to the given path. This is the only

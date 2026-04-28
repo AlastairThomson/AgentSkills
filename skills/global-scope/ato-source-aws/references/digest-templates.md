@@ -382,7 +382,7 @@ none}. Versioning: {enabled|suspended|disabled}. Server access logging:
 
 | Resource | Relationship | Where to look |
 |---|---|---|
-| `{KMS key ARN}` | Default encryption | [aws_kms-key-{keyId}.md](../10-security-policies/evidence/aws_kms-key-{keyId}.md) |
+| `{KMS key ARN}` | Default encryption | [aws_kms-key-{keyId}.md](../controls/SC-system-communications-protection/evidence/aws_kms-key-{keyId}.md) |
 | `{Logging target bucket}` | Server access logs delivered here | not in scope |
 
 ## Observations
@@ -443,8 +443,8 @@ delivery {success at {date} | error: {LatestDeliveryError}}.
 
 | Resource | Relationship | Where to look |
 |---|---|---|
-| `{S3BucketName}` | Log destination | [aws_s3-bucket-{S3BucketName}.md](../15-media-protection/evidence/aws_s3-bucket-{S3BucketName}.md) |
-| `{KMS key ARN}` | Encrypts log files | [aws_kms-key-{keyId}.md](../10-security-policies/evidence/aws_kms-key-{keyId}.md) |
+| `{S3BucketName}` | Log destination | [aws_s3-bucket-{S3BucketName}.md](../controls/MP-media-protection/evidence/aws_s3-bucket-{S3BucketName}.md) |
+| `{KMS key ARN}` | Encrypts log files | [aws_kms-key-{keyId}.md](../controls/SC-system-communications-protection/evidence/aws_kms-key-{keyId}.md) |
 | `{CloudWatchLogsLogGroupArn}` | Optional CloudWatch destination | not in scope |
 
 ## Observations

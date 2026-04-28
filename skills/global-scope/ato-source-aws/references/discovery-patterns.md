@@ -6,18 +6,18 @@ Maps AWS services and resources to the 20 control families.
 
 | Service | Primary family | Also feeds |
 |---|---|---|
-| IAM (users, roles, groups, policies) | `04-access-control` | `05-authentication-session`, `10-security-policies` |
-| IAM credential report | `04-access-control` | `05-authentication-session`, `11-personnel-security` |
-| Config rules + compliance | `03-configuration-management` | `20-risk-assessment` |
-| CloudTrail trails + event selectors | `06-audit-logging` | `17-sdlc-secure-development` |
-| CloudWatch Logs groups (metadata) | `06-audit-logging` | — |
-| Security Hub findings summary | `20-risk-assessment` | `07-vulnerability-management` |
-| GuardDuty detectors + findings summary | `08-incident-response` | `20-risk-assessment` |
-| S3 bucket policies + encryption | `15-media-protection` | `16-network-communications` |
-| KMS keys + aliases | `10-security-policies` (crypto) | `15-media-protection` |
-| VPC + security groups | `16-network-communications` | — |
-| WAF rules | `16-network-communications` | `07-vulnerability-management` |
-| Backup plans | `09-contingency-plan` | — |
+| IAM (users, roles, groups, policies) | `controls/AC-access-control` | `controls/IA-identification-authentication`, `controls/SC-system-communications-protection` |
+| IAM credential report | `controls/AC-access-control` | `controls/IA-identification-authentication`, `controls/PS-personnel-security` |
+| Config rules + compliance | `controls/CM-configuration-management` | `controls/RA-risk-assessment` |
+| CloudTrail trails + event selectors | `controls/AU-audit-accountability` | `controls/SA-system-services-acquisition` |
+| CloudWatch Logs groups (metadata) | `controls/AU-audit-accountability` | — |
+| Security Hub findings summary | `controls/RA-risk-assessment` | `controls/SI-system-information-integrity` |
+| GuardDuty detectors + findings summary | `controls/IR-incident-response` | `controls/RA-risk-assessment` |
+| S3 bucket policies + encryption | `controls/MP-media-protection` | `controls/SC-system-communications-protection` |
+| KMS keys + aliases | `controls/SC-system-communications-protection` (crypto) | `controls/MP-media-protection` |
+| VPC + security groups | `controls/SC-system-communications-protection` | — |
+| WAF rules | `controls/SC-system-communications-protection` | `controls/SI-system-information-integrity` |
+| Backup plans | `controls/CP-contingency-planning` | — |
 
 ## Citation granularity
 

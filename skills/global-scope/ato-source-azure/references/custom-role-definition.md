@@ -66,12 +66,12 @@ group scope and list that scope in `AssignableScopes` instead.
 - `Microsoft.RedHatOpenShift/locations/operationsstatus/read` — needed
   alongside `openShiftClusters/read` to query ARO cluster state.
 - `Microsoft.Storage/storageAccounts/read` and child reads — required to
-  collect storage-account metadata for `15-media-protection` evidence
+  collect storage-account metadata for `controls/MP-media-protection` evidence
   even though the cheatsheet does not yet enumerate storage-account
   commands. Included to future-proof the role; remove if you want a
   strictly-current minimum.
 - `Microsoft.RecoveryServices/vaults/read` and `backupPolicies/read` —
-  required to enumerate Backup Vaults for `09-contingency-plan` evidence.
+  required to enumerate Backup Vaults for `controls/CP-contingency-planning` evidence.
 - `Microsoft.Authorization/policyExemptions/read` — needed by the policy-
   assignment digest to enumerate any exemption that overrides a policy's
   effect on specific scopes. Without this the digest would over-state the

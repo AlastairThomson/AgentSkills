@@ -5,26 +5,26 @@ the 20 control families. Matching is case-insensitive.
 
 | Family | Filename patterns |
 |---|---|
-| `01-system-design` | `*SDD*`, `*System Design*`, `*Architecture*` |
-| `02-system-inventory` | `*Inventory*`, `*CMDB*`, `*Asset*` |
-| `03-configuration-management` | `*CMP*`, `*Baseline*`, `*Hardening*`, `*Change Request*` |
-| `04-access-control` | `*Access Control*`, `*RBAC*`, `*Access Request*` |
-| `05-authentication-session` | `*Authentication*`, `*MFA*`, `*Password Policy*` |
-| `06-audit-logging` | `*Audit*`, `*Log Retention*`, `*SIEM*` |
-| `07-vulnerability-management` | `*Vulnerability*`, `*Patch*`, `*POA&M*` |
-| `08-incident-response` | `*IR*`, `*Incident*`, `*Playbook*` |
-| `09-contingency-plan` | `*CP*`, `*Contingency*`, `*DR*`, `*Runbook*`, `*BCP*` |
-| `10-security-policies` | `*Policy*`, `*Policies*`, `*SSP*` |
-| `11-personnel-security` | `*Personnel*`, `*Background*`, `*Clearance*` |
-| `12-security-training` | `*Training*`, `*Awareness*` |
-| `13-system-maintenance` | `*Maintenance*`, `*Change Log*` |
-| `14-physical-environmental` | `*Physical*`, `*Facility*`, `*Datacenter*` |
-| `15-media-protection` | `*Media*`, `*Sanitization*`, `*Disposal*` |
-| `16-network-communications` | `*Network*`, `*Firewall*`, `*VPN*` |
-| `17-sdlc-secure-development` | `*SDLC*`, `*Code Review*` |
-| `18-supply-chain` | `*Supply Chain*`, `*SBOM*`, `*Vendor*` |
-| `19-interconnections` | `*ISA*`, `*MOU*`, `*Interconnection*` |
-| `20-risk-assessment` | `*Risk Assessment*`, `*Assessment Report*`, `*POA&M*` |
+| `ssp-sections/01-system-description` | `*SDD*`, `*System Design*`, `*Architecture*` |
+| `ssp-sections/02-system-inventory` | `*Inventory*`, `*CMDB*`, `*Asset*` |
+| `ssp-sections/09-configuration-management-plan` | `*CMP*`, `*Baseline*`, `*Hardening*`, `*Change Request*` |
+| `controls/AC-access-control` | `*Access Control*`, `*RBAC*`, `*Access Request*` |
+| `controls/IA-identification-authentication` | `*Authentication*`, `*MFA*`, `*Password Policy*` |
+| `controls/AU-audit-accountability` | `*Audit*`, `*Log Retention*`, `*SIEM*` |
+| `ssp-sections/10-vulnerability-mgmt-plan` | `*Vulnerability*`, `*Patch*`, `*POA&M*` |
+| `ssp-sections/07-incident-response-plan` | `*IR*`, `*Incident*`, `*Playbook*` |
+| `ssp-sections/08-contingency-plan` | `*CP*`, `*Contingency*`, `*DR*`, `*Runbook*`, `*BCP*` |
+| `ssp-sections/06-policies-procedures` | `*Policy*`, `*Policies*`, `*SSP*` |
+| `controls/PS-personnel-security` | `*Personnel*`, `*Background*`, `*Clearance*` |
+| `controls/AT-awareness-training` | `*Training*`, `*Awareness*` |
+| `controls/MA-maintenance` | `*Maintenance*`, `*Change Log*` |
+| `controls/PE-physical-environmental` | `*Physical*`, `*Facility*`, `*Datacenter*` |
+| `controls/MP-media-protection` | `*Media*`, `*Sanitization*`, `*Disposal*` |
+| `controls/SC-system-communications-protection` | `*Network*`, `*Firewall*`, `*VPN*` |
+| `ssp-sections/11-sdlc-document` | `*SDLC*`, `*Code Review*` |
+| `ssp-sections/12-supply-chain-risk-mgmt-plan` | `*Supply Chain*`, `*SBOM*`, `*Vendor*` |
+| `ssp-sections/05-interconnections` | `*ISA*`, `*MOU*`, `*Interconnection*` |
+| `ssp-sections/03-risk-assessment-report` | `*Risk Assessment*`, `*Assessment Report*`, `*POA&M*` |
 
 ## File type allow list
 

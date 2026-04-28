@@ -77,14 +77,30 @@ the Skill tool, e.g.:
 - `skill: "ato-source-smb"` with the resolved smb scope
 
 Each sibling is read-only, ambient-auth, and confirms its own scope in-session
-before making any external call. They write evidence files into
-`docs/ato-package/{NN-family-slug}/evidence/` (source-prefixed: `sharepoint_*`,
-`aws_*`, `azure_*`, `smb_*`) and a citation batch into
+before making any external call. They write evidence files into either
+`docs/ato-package/ssp-sections/{NN}-{slug}/evidence/` or
+`docs/ato-package/controls/{CF}-{slug}/evidence/{CONTROL-ID}/`, source-prefixed
+(`sharepoint_*`, `aws_*`, `azure_*`, `smb_*`), and a citation batch into
 `docs/ato-package/.staging/{source}-citations.json`. The full contract lives in
 `references/sibling-contract.md`. Siblings run after Orient (Step 1) and before
 Generate (Step 4), so their evidence is visible to generation. If a sibling fails
 (auth missing, scope rejected), the orchestrator records the failure and continues
 with the remaining sources — graceful degradation is required.
+
+### Optional follow-on: remediation guidance
+
+`ato-remediation-guidance` is a separate sibling skill that produces a
+developer-facing punch list (`REMEDIATION_GUIDANCE.md`) of concrete code,
+config, infra, and test changes that close the gaps surfaced by this run.
+It is **not** part of the default 8-step workflow and is not auto-invoked
+when the package finishes. Only invoke it when the user explicitly asks
+for "remediation", "what does the developer need to fix", "feed this to
+a coding agent", or similar. Pass no arguments — the sibling reads the
+`docs/ato-package/` you just produced.
+
+```
+skill: "ato-remediation-guidance"
+```
 
 ## Step 0: Scope Selection
 
@@ -212,32 +228,81 @@ IaC:        terraform/, cloudformation/, openshift/
 
 ## Step 3: Collect
 
-Create the output directory structure. Each control family gets one directory,
-with the generated narrative document sitting at the root of that directory and
-all physical evidence copies living in an `evidence/` subdirectory. There is no
-`collected/` vs `generated/` split — a single `evidence/` folder per family holds
-every source file the assessor needs, regardless of whether it was copied as
-direct evidence or cited by the generated narrative.
+The output directory has **two top-level branches**: `ssp-sections/` for
+the document-shaped artifacts that an SSP package needs, and `controls/`
+for per-control-family implementation evidence. They serve different
+audiences:
+
+- `ssp-sections/<NN>-<slug>/` — the body of the SSP itself plus its
+  required attachments (SDD, IRP, CP, CMP, ConMon plan, PIA, etc.). One
+  generated narrative document per section; evidence under `evidence/`.
+- `controls/<CF>-<slug>/` — one folder per NIST 800-53 Rev 5 control
+  family (all 20 always present). Holds the family-level implementation
+  statement plus per-control evidence, with controls organised under
+  the family folder.
+
+A single source file frequently lives in both — the IRP document is an
+SSP attachment AND evidence for IR-8, the CMP document is an attachment
+AND evidence for CM-9, an OpenShift NetworkPolicy is part of the SDD's
+boundary diagram AND evidence for SC-7. When that happens, copy the
+file into both. Each top-level folder must be self-contained.
 
 ```
 docs/ato-package/
 ├── INDEX.md                                    ← Master map
 ├── CHECKLIST.md                                ← Per-item status
 ├── CODE_REFERENCES.md                          ← All [CR-NNN] resolved
-├── 01-system-design/
-│   ├── system-design-evidence.md               ← Generated narrative (at root)
-│   └── evidence/                               ← All supporting files
-│       ├── README.md
-│       ├── Dockerfile
-│       └── docker-compose.yml
-├── 02-system-inventory/
-│   ├── system-inventory-evidence.md
-│   └── evidence/
-│       └── ...
-├── ...
-└── 20-risk-assessment/
-    ├── risk-assessment-gap-analysis.md
-    └── evidence/
+├── REMEDIATION_GUIDANCE.md                     ← Optional, only when ato-remediation-guidance is run
+│
+├── ssp-sections/
+│   ├── 01-system-description/
+│   │   ├── system-description-evidence.md      ← Generated narrative (at root)
+│   │   └── evidence/                           ← All supporting files
+│   │       ├── README.md
+│   │       ├── Dockerfile
+│   │       └── docker-compose.yml
+│   ├── 02-system-inventory/
+│   │   ├── system-inventory-evidence.md
+│   │   └── evidence/
+│   ├── 03-risk-assessment-report/
+│   ├── 04-poam/
+│   ├── 05-interconnections/
+│   ├── 06-policies-procedures/
+│   ├── 07-incident-response-plan/
+│   ├── 08-contingency-plan/
+│   ├── 09-configuration-management-plan/
+│   ├── 10-vulnerability-mgmt-plan/
+│   ├── 11-sdlc-document/
+│   ├── 12-supply-chain-risk-mgmt-plan/
+│   ├── 13-continuous-monitoring-plan/
+│   └── 14-privacy-impact-assessment/
+│
+└── controls/
+    ├── AC-access-control/
+    │   ├── ac-implementation.md                ← Family-level narrative
+    │   └── evidence/                           ← Per-control evidence
+    │       ├── AC-2/
+    │       ├── AC-3/
+    │       └── ...
+    ├── AT-awareness-training/
+    ├── AU-audit-accountability/
+    ├── CA-assessment-authorization/
+    ├── CM-configuration-management/
+    ├── CP-contingency-planning/
+    ├── IA-identification-authentication/
+    ├── IR-incident-response/
+    ├── MA-maintenance/
+    ├── MP-media-protection/
+    ├── PE-physical-environmental/
+    ├── PL-planning/
+    ├── PM-program-management/
+    ├── PS-personnel-security/
+    ├── PT-pii-processing-transparency/
+    ├── RA-risk-assessment/
+    ├── SA-system-services-acquisition/
+    ├── SC-system-communications-protection/
+    ├── SI-system-information-integrity/
+    └── SR-supply-chain-risk-management/
 ```
 
 ### What "collect" means — literally copy the file into evidence/
@@ -252,19 +317,26 @@ defeats the purpose. The assessor needs the actual document.
 
 **Step-by-step collection process:**
 
-1. For every file discovered during Step 2 that maps to an artifact section, `cp`
-   the actual file into `docs/ato-package/{NN-family-slug}/evidence/`.
+1. For every file discovered during Step 2 that maps to an SSP section or
+   a control, `cp` the actual file into the appropriate evidence
+   directory under `docs/ato-package/`. Use the routing table in Step 4
+   ("File naming convention") to decide which `ssp-sections/<NN>-…/`
+   and/or `controls/<CF>-…/<control-id>/` evidence folders apply.
 2. Preserve the original filename so the assessor can trace it back. If a generic
    filename could collide with another source (e.g., two `config.php` from
    different directories), prefix with enough path context to disambiguate:
    `app-Config-Filters.php`, `legacy-config-config.php`.
-3. Record the copy in INDEX.md: original path → `evidence/` path → which sub-items
-   it covers.
+3. Record the copy in INDEX.md: original path → `evidence/` path(s) → which
+   SSP sub-items / controls it covers.
 
 ```bash
-# Example: placing an existing security assessment doc into its family's evidence/
+# Example: an authentication assessment doc is evidence for both the
+# control family (IA-2 implementation) and could be referenced from the
+# SDD authentication-design section. Copy it into each.
 cp docs/assessments/repository-security-assessment/07-authentication-and-authorization.md \
-   docs/ato-package/05-authentication-session/evidence/07-authentication-and-authorization.md
+   docs/ato-package/controls/IA-identification-authentication/evidence/IA-2/07-authentication-and-authorization.md
+cp docs/assessments/repository-security-assessment/07-authentication-and-authorization.md \
+   docs/ato-package/ssp-sections/01-system-description/evidence/07-authentication-and-authorization.md
 ```
 
 **What to collect (copy the actual file):**
@@ -293,26 +365,31 @@ the collection behavior is identical for the sections being analyzed.
 
 Before moving to Step 4, verify collection is complete:
 
-1. List all files you just copied with `find docs/ato-package/*/evidence/ -type f`
+1. List all files you just copied with `find docs/ato-package/ -type f -path '*/evidence/*'`
 2. Confirm each file is a real copy (not a stub or reference document)
 3. If you find zero evidence files, go back — most repositories have at least a
    README, Dockerfile, CI/CD configs, or existing docs that qualify as evidence
 
-Common files that should almost always land in the relevant family's `evidence/`:
-- `README.md` → Section 1 (System Design)
-- `Dockerfile`, `docker-compose.yml` → Section 2 (Inventory) and Section 3 (Config)
-- `.github/workflows/*.yml` → Section 7 (Vuln Mgmt) and Section 17 (SDLC)
-- `openshift/**/*.yaml` or K8s manifests → Section 16 (Network)
-- Any `docs/assessments/` or `docs/security/` → map to relevant sections
-- `.gitleaks.toml`, `.snyk` → Section 7 (Vuln Mgmt)
-- SAML/OAuth configs → Section 5 (Authentication)
-- `SECURITY.md` → Section 8 (Incident Response)
+Common files and where they typically land. Most are evidence for both an
+SSP section and one or more control families — `cp` into each.
 
-If the same source file is evidence for more than one control family (e.g., a
-GitHub Actions workflow that supports both CM and vulnerability management), copy
-it into each family's `evidence/` folder. Duplication across families is fine —
-each folder must be self-contained so a reviewer reading one section never has
-to navigate elsewhere to verify a citation.
+| Source file | SSP section | Control family folder |
+|---|---|---|
+| `README.md` | `01-system-description/` | `PL-planning/evidence/PL-2/` |
+| `Dockerfile`, `docker-compose.yml` | `01-system-description/`, `02-system-inventory/`, `09-configuration-management-plan/` | `CM-configuration-management/evidence/CM-2/`, `CM-configuration-management/evidence/CM-6/` |
+| `.github/workflows/*.yml` | `09-configuration-management-plan/`, `10-vulnerability-mgmt-plan/`, `11-sdlc-document/` | `CM-configuration-management/evidence/CM-3/`, `SI-system-information-integrity/evidence/SI-2/`, `SA-system-services-acquisition/evidence/SA-11/` |
+| `openshift/**/*.yaml` / K8s manifests | `01-system-description/` | `SC-system-communications-protection/evidence/SC-7/` |
+| `.gitleaks.toml`, `.snyk`, `dependabot.yml` | `10-vulnerability-mgmt-plan/` | `SI-system-information-integrity/evidence/SI-2/`, `RA-risk-assessment/evidence/RA-5/` |
+| SAML/OAuth/OIDC configs | `01-system-description/` | `IA-identification-authentication/evidence/IA-2/` |
+| `SECURITY.md` | `07-incident-response-plan/` | `IR-incident-response/evidence/IR-6/` |
+| `CODEOWNERS`, branch protection | `09-configuration-management-plan/`, `11-sdlc-document/` | `CM-configuration-management/evidence/CM-3/`, `SA-system-services-acquisition/evidence/SA-15/` |
+| Existing `docs/assessments/` | `03-risk-assessment-report/` | `CA-assessment-authorization/evidence/CA-2/` |
+
+If the same source file is evidence for more than one control or SSP
+section, copy it into each `evidence/` folder. Duplication across
+folders is required — each folder must be self-contained so a reviewer
+reading one section never has to navigate elsewhere to verify a
+citation.
 
 ## Step 4: Generate
 
@@ -371,105 +448,257 @@ Templates and concrete examples live in `references/generation-patterns.md` unde
 
 ### File naming convention
 
-Use consistent, predictable names across all sections:
+Generated documents come in two flavours: a per-SSP-section narrative,
+and a per-control-family implementation statement.
 
-| Section has repo evidence | Filename pattern | Example |
+| Where it lives | Filename pattern | Example |
 |---|---|---|
-| Yes — evidence to synthesize | `{section-slug}-evidence.md` | `access-control-evidence.md` |
-| No — mostly gaps to document | `{section-slug}-gap-analysis.md` | `contingency-plan-gap-analysis.md` |
+| `ssp-sections/<NN>-<slug>/` with evidence | `{slug}-evidence.md` | `system-description-evidence.md` |
+| `ssp-sections/<NN>-<slug>/` mostly gaps | `{slug}-gap-analysis.md` | `contingency-plan-gap-analysis.md` |
+| `controls/<CF>-<slug>/` | `{cf-lower}-implementation.md` | `ac-implementation.md`, `sc-implementation.md` |
 
-Section slugs (use these exactly):
-- 01: `system-design`
-- 02: `system-inventory`
-- 03: `configuration-management`
-- 04: `access-control`
-- 05: `authentication-session`
-- 06: `audit-logging`
-- 07: `vulnerability-management`
-- 08: `incident-response`
-- 09: `contingency-plan`
-- 10: `security-policies`
-- 11: `personnel-security`
-- 12: `security-training`
-- 13: `system-maintenance`
-- 14: `physical-environmental`
-- 15: `media-protection`
-- 16: `network-communications`
-- 17: `sdlc-secure-development`
-- 18: `supply-chain`
-- 19: `interconnections`
-- 20: `risk-assessment`
+#### SSP sections (14)
+
+These are the document-shaped artifacts an SSP package needs. One
+generated document per section, with bundled evidence under
+`evidence/`.
+
+| # | Slug | Directory | Generated filename | What this document is |
+|---|---|---|---|---|
+| 01 | `system-description` | `ssp-sections/01-system-description/` | `system-description-evidence.md` | The System Description / SDD body — purpose, boundary, components, data flows, architecture diagrams |
+| 02 | `system-inventory` | `ssp-sections/02-system-inventory/` | `system-inventory-evidence.md` | Hardware, software, firmware, library, and dependency inventory (CM-8 deliverable) |
+| 03 | `risk-assessment-report` | `ssp-sections/03-risk-assessment-report/` | `risk-assessment-report-evidence.md` | FIPS-199 categorization, threats, vulnerabilities, likelihood/impact, RAR (RA-3 deliverable) |
+| 04 | `poam` | `ssp-sections/04-poam/` | `poam-gap-analysis.md` | Plan of Action & Milestones — open findings, target dates, status (CA-5) |
+| 05 | `interconnections` | `ssp-sections/05-interconnections/` | `interconnections-evidence.md` | ISAs, MOUs, SLAs for every external connection (CA-3, SA-9) |
+| 06 | `policies-procedures` | `ssp-sections/06-policies-procedures/` | `policies-procedures-evidence.md` | The cross-family `xx-1` policy + procedure documents (one per family) |
+| 07 | `incident-response-plan` | `ssp-sections/07-incident-response-plan/` | `incident-response-plan-evidence.md` | The IRP attachment (IR-8) |
+| 08 | `contingency-plan` | `ssp-sections/08-contingency-plan/` | `contingency-plan-evidence.md` | The CP / DRP / COOP attachment (CP-2) |
+| 09 | `configuration-management-plan` | `ssp-sections/09-configuration-management-plan/` | `configuration-management-plan-evidence.md` | The CMP attachment (CM-9) |
+| 10 | `vulnerability-mgmt-plan` | `ssp-sections/10-vulnerability-mgmt-plan/` | `vulnerability-mgmt-plan-evidence.md` | The VM plan, scan cadence, patch SLAs (RA-5, SI-2) |
+| 11 | `sdlc-document` | `ssp-sections/11-sdlc-document/` | `sdlc-document-evidence.md` | The SDLC document — branch model, code review, testing, release process (SA-3, SA-15) |
+| 12 | `supply-chain-risk-mgmt-plan` | `ssp-sections/12-supply-chain-risk-mgmt-plan/` | `supply-chain-risk-mgmt-plan-evidence.md` | The SCRM plan attachment (SR-2) |
+| 13 | `continuous-monitoring-plan` | `ssp-sections/13-continuous-monitoring-plan/` | `continuous-monitoring-plan-gap-analysis.md` | The ConMon strategy and sampling plan (CA-7) |
+| 14 | `privacy-impact-assessment` | `ssp-sections/14-privacy-impact-assessment/` | `privacy-impact-assessment-gap-analysis.md` | PIA / SORN / privacy threshold analysis (PT-1 onward) |
+
+#### Control families (20)
+
+All 20 NIST 800-53 Rev 5 families always appear, even when a family is
+fully INHERITED or fully OPERATIONAL — empty folders carry a
+`{cf}-implementation.md` that documents the gap explicitly. Per-control
+evidence sits under `evidence/<CONTROL-ID>/` (e.g.
+`evidence/AC-2/`, `evidence/AC-2(4)/`).
+
+| CF | Family name | Directory | Implementation document |
+|---|---|---|---|
+| AC | Access Control | `controls/AC-access-control/` | `ac-implementation.md` |
+| AT | Awareness and Training | `controls/AT-awareness-training/` | `at-implementation.md` |
+| AU | Audit and Accountability | `controls/AU-audit-accountability/` | `au-implementation.md` |
+| CA | Assessment, Authorization, and Monitoring | `controls/CA-assessment-authorization/` | `ca-implementation.md` |
+| CM | Configuration Management | `controls/CM-configuration-management/` | `cm-implementation.md` |
+| CP | Contingency Planning | `controls/CP-contingency-planning/` | `cp-implementation.md` |
+| IA | Identification and Authentication | `controls/IA-identification-authentication/` | `ia-implementation.md` |
+| IR | Incident Response | `controls/IR-incident-response/` | `ir-implementation.md` |
+| MA | Maintenance | `controls/MA-maintenance/` | `ma-implementation.md` |
+| MP | Media Protection | `controls/MP-media-protection/` | `mp-implementation.md` |
+| PE | Physical and Environmental Protection | `controls/PE-physical-environmental/` | `pe-implementation.md` |
+| PL | Planning | `controls/PL-planning/` | `pl-implementation.md` |
+| PM | Program Management | `controls/PM-program-management/` | `pm-implementation.md` |
+| PS | Personnel Security | `controls/PS-personnel-security/` | `ps-implementation.md` |
+| PT | PII Processing and Transparency | `controls/PT-pii-processing-transparency/` | `pt-implementation.md` |
+| RA | Risk Assessment | `controls/RA-risk-assessment/` | `ra-implementation.md` |
+| SA | System and Services Acquisition | `controls/SA-system-services-acquisition/` | `sa-implementation.md` |
+| SC | System and Communications Protection | `controls/SC-system-communications-protection/` | `sc-implementation.md` |
+| SI | System and Information Integrity | `controls/SI-system-information-integrity/` | `si-implementation.md` |
+| SR | Supply Chain Risk Management | `controls/SR-supply-chain-risk-management/` | `sr-implementation.md` |
+
+#### Routing the same source file to both branches
+
+Most useful evidence is dual-routed. The implementation document in
+`controls/<CF>-…/` cites the control(s) and references the SSP section
+the same evidence supports; the SSP section narrative cites the
+implementation document. The same `[CR-NNN]` resolves both — the
+`Cited by` column in `CODE_REFERENCES.md` lists every doc that
+references it.
+
+Quick mapping from "which old `NN-CF-slug` did this evidence used to
+live in" to the new layout, for the source siblings that were written
+against the old paths:
+
+| Old slug | New control folder (cloud-control evidence) | New SSP section (document evidence) |
+|---|---|---|
+| `01-PL-system-design` | `controls/PL-planning/evidence/PL-2/` | `ssp-sections/01-system-description/` |
+| `02-CM-system-inventory` | `controls/CM-configuration-management/evidence/CM-8/` | `ssp-sections/02-system-inventory/` |
+| `03-CM-configuration-management` | `controls/CM-configuration-management/evidence/CM-2/`, `CM-3/`, `CM-6/` | `ssp-sections/09-configuration-management-plan/` |
+| `04-AC-access-control` | `controls/AC-access-control/evidence/AC-2/`, `AC-3/`, `AC-6/` | — |
+| `05-IA-authentication-session` | `controls/IA-identification-authentication/evidence/IA-2/`, `IA-5/` | — |
+| `06-AU-audit-logging` | `controls/AU-audit-accountability/evidence/AU-2/`, `AU-3/`, `AU-12/` | — |
+| `07-SI-vulnerability-management` | `controls/SI-system-information-integrity/evidence/SI-2/`, `SI-3/`, `SI-7/` + `controls/RA-risk-assessment/evidence/RA-5/` | `ssp-sections/10-vulnerability-mgmt-plan/` |
+| `08-IR-incident-response` | `controls/IR-incident-response/evidence/IR-4/`, `IR-6/` | `ssp-sections/07-incident-response-plan/` |
+| `09-CP-contingency-plan` | `controls/CP-contingency-planning/evidence/CP-9/`, `CP-10/` | `ssp-sections/08-contingency-plan/` |
+| `10-PL-security-policies` (cloud KMS) | `controls/SC-system-communications-protection/evidence/SC-12/`, `SC-13/` | — |
+| `10-PL-security-policies` (SharePoint policy docs) | — | `ssp-sections/06-policies-procedures/` |
+| `11-PS-personnel-security` | `controls/PS-personnel-security/evidence/PS-3/`, `PS-4/` | — |
+| `12-AT-security-training` | `controls/AT-awareness-training/evidence/AT-2/`, `AT-3/` | — |
+| `13-MA-system-maintenance` | `controls/MA-maintenance/evidence/MA-2/`, `MA-4/` | — |
+| `14-PE-physical-environmental` | `controls/PE-physical-environmental/` | — |
+| `15-MP-media-protection` | `controls/MP-media-protection/evidence/MP-4/`, `MP-6/` | — |
+| `16-SC-network-communications` | `controls/SC-system-communications-protection/evidence/SC-7/`, `SC-8/` | — |
+| `17-SA-sdlc-secure-development` | `controls/SA-system-services-acquisition/evidence/SA-11/`, `SA-15/` | `ssp-sections/11-sdlc-document/` |
+| `18-SR-supply-chain` | `controls/SR-supply-chain-risk-management/evidence/SR-3/`, `SR-6/` | `ssp-sections/12-supply-chain-risk-mgmt-plan/` |
+| `19-CA-interconnections` | `controls/CA-assessment-authorization/evidence/CA-3/` | `ssp-sections/05-interconnections/` |
+| `20-RA-risk-assessment` (Security Hub / Secure Score) | `controls/RA-risk-assessment/evidence/RA-3/`, `RA-5/` | — |
+| `20-RA-risk-assessment` (RAR / SAR documents) | — | `ssp-sections/03-risk-assessment-report/` |
+| POA&M documents (was 20) | — | `ssp-sections/04-poam/` |
 
 ### Generated document format
 
-Every generated document follows this structure:
+#### SSP-section narrative (`ssp-sections/<NN>-<slug>/<slug>-evidence.md`)
 
 ```markdown
 # [Section Name] — Generated Artifact
 
 > **Generated**: [date]
 > **Status**: DRAFT — requires human review and completion
-> **Artifact Guide Section**: [section number and title]
+> **SSP Section**: [section number and title]
+> **Controls supported**: [comma-separated list — controls this section is evidence for]
+> **Cross-references**: [list of `controls/<CF>-…/<cf>-implementation.md` paths whose narratives also cite this section]
 
 ## Sources Used
 
-| Ref | What was extracted |
-|---|---|
-| [CR-012] | Authentication enforcement logic |
-| [CR-013] | SAML SP configuration |
-| [CR-014] | Service definitions and ports |
+| Ref | Controls | What was extracted |
+|---|---|---|
+| [CR-012] | AC-3, AC-6 | Authentication enforcement logic |
+| [CR-013] | IA-2, IA-8 | SAML SP configuration |
+| [CR-014] | SC-7 | Service definitions and ports |
 
 (All `[CR-NNN]` identifiers resolve in `CODE_REFERENCES.md` at the package root.)
 
-## [Document content organized per the artifact guide requirements]
+## [Document content organized per the SSP-section requirements]
 
-### [Sub-item from artifact guide]
+### [Sub-item — annotate with control IDs where they apply]
+
+> **Controls**: AC-2, AC-2(4)
 
 [Narrative content with inline `[CR-NNN]` citations. When the narrative describes
 how a mechanism works in code, follow the paragraph with a Mermaid sequence,
-flowchart, or state diagram — see references/generation-patterns.md for templates.]
+flowchart, or state diagram. Reference specific control IDs inline when
+explaining how a mechanism satisfies a requirement, e.g. "The role-check
+middleware enforces least privilege per **AC-6(1)** by …"]
 
 ### [Another sub-item]
 
+> **Controls**: AC-2(3)
 > **GAP**: [Description of what's missing and what someone should look for]
-> **Needed for**: ARTIFACT-GUIDE Section X, bullet Y
+> **Needed for**: SSP Section X, bullet Y; **AC-2(3)** Disable Inactive Accounts
 > **Suggested source**: [Where this information likely lives — HR system, ticketing tool, etc.]
 
 [Any partial content that was found]
 ```
 
+#### Control-family implementation (`controls/<CF>-<slug>/<cf>-implementation.md`)
+
+```markdown
+# [Family name] — Implementation Statement
+
+> **Generated**: [date]
+> **Status**: DRAFT — requires human review and completion
+> **Control Family**: AC — Access Control
+> **Controls in scope**: AC-1, AC-2, AC-2(4), AC-3, AC-6, AC-6(1), AC-17, AC-19
+> **SSP cross-references**: `ssp-sections/06-policies-procedures/` (for AC-1), `ssp-sections/01-system-description/` (for boundary)
+
+## Sources Used
+
+| Ref | Controls | What was extracted |
+|---|---|---|
+| ... | ... | ... |
+
+## AC-1 — Policy and Procedures
+
+> **Status**: GREEN | YELLOW | RED | INHERITED
+> **Evidence**: `evidence/AC-1/` (or "Inherited from {provider}")
+
+[Narrative implementation statement for AC-1, citing `[CR-NNN]` IDs.]
+
+## AC-2 — Account Management
+
+> **Status**: YELLOW
+> **Evidence**: `evidence/AC-2/`
+
+[Narrative.]
+
+### AC-2(4) — Automated Audit Actions
+
+> **Status**: RED
+> **GAP**: ...
+
+[... one section per control and per enhancement actually in scope for the system's
+baseline. Skip enhancements that aren't required at the system's impact level
+(LOW / MODERATE / HIGH).]
+```
+
+**Control-ID style.** Use the canonical NIST 800-53 Rev 5 dotted form:
+family code (`AC`), base control (`AC-2`), control enhancement
+(`AC-2(4)`). Always uppercase the family code. List multiple controls
+comma-separated. When a sub-item maps cleanly to one control, put a
+`> **Controls**: AC-2(4)` blockquote on the line immediately under the
+sub-heading. When a paragraph cites multiple controls inline, format
+the inline reference in **bold** (e.g. **AC-6(1)**) so an assessor
+skimming the page can see the control mapping at a glance.
+
 ### Bundling evidence with generated documents
 
-Every file listed in a generated document's "Sources Used" table, and every file
-that a `[CR-NNN]` citation in the narrative points at, must end up in the same
-family's `evidence/` folder. There is only one `evidence/` folder per control
-family — the same one Step 3 populated. Step 4 simply adds any additional cited
-sources that weren't already copied.
+Every file listed in a generated document's "Sources Used" table, and every
+file that a `[CR-NNN]` citation in the narrative points at, must end up in
+the appropriate `evidence/` folder. The two layouts have slightly different
+shapes:
+
+- `ssp-sections/<NN>-<slug>/evidence/` is **flat** — every supporting file
+  for the section narrative sits at the top of the folder. No
+  per-control sub-folders.
+- `controls/<CF>-<slug>/evidence/` is **per-control** — files are
+  grouped under `evidence/<CONTROL-ID>/` (e.g. `evidence/AC-2/`,
+  `evidence/AC-2(4)/`, `evidence/AC-3/`). When evidence covers multiple
+  controls in the same family, copy it into every applicable
+  per-control sub-folder.
 
 ```
-04-access-control/
-├── access-control-evidence.md      ← Generated narrative at the root
-└── evidence/                       ← Single evidence folder per family
-    ├── AuthFilter.php
-    ├── RoleFilter.php
-    ├── Filters.php
-    ├── Routes.php
-    ├── MY_Controller.php
-    └── database-scripts.sql
+ssp-sections/01-system-description/
+├── system-description-evidence.md  ← Generated narrative
+└── evidence/                       ← Flat
+    ├── README.md
+    ├── Dockerfile
+    ├── docker-compose.yml
+    └── architecture-diagram.png
+
+controls/AC-access-control/
+├── ac-implementation.md            ← Family-level implementation statement
+└── evidence/                       ← Per-control
+    ├── AC-2/
+    │   ├── UserController.php
+    │   └── account-lifecycle.md
+    ├── AC-3/
+    │   ├── AuthFilter.php
+    │   └── RoleFilter.php
+    ├── AC-6/
+    │   └── role-matrix.yaml
+    └── AC-17/
+        └── vpn-config.md
 ```
 
 **How to do it:**
-1. After writing each generated document, read back its "Sources Used" table and
-   every `[CR-NNN]` citation in the narrative.
-2. For every cited file that isn't already in this family's `evidence/` folder,
-   `cp` it there.
-3. If a source file has a generic name that could collide (e.g., `config.php` from
-   two different directories), prefix it with enough path context to disambiguate:
-   `app-Config-Filters.php` or `legacy-config-config.php`. (Those are illustrative
-   names for a PHP/CodeIgniter-style layout; substitute the equivalent paths for
-   your actual stack.)
-4. The same file may need to land in several families' `evidence/` folders if it
-   supports multiple controls — that's expected.
+1. After writing each generated document, read back its "Sources Used"
+   table and every `[CR-NNN]` citation in the narrative.
+2. For each cited file that isn't already in the destination
+   `evidence/` folder, `cp` it there. For control-family docs, that
+   destination is `evidence/<CONTROL-ID>/`; for SSP-section docs it's
+   the flat `evidence/`.
+3. If a source file has a generic name that could collide (e.g.
+   `config.php` from two different directories), prefix it with enough
+   path context to disambiguate.
+4. The same file routinely lands in several places — once in each
+   relevant `controls/<CF>/evidence/<CONTROL-ID>/` and once in each
+   relevant `ssp-sections/<NN>-…/evidence/`. That duplication is
+   required so each top-level folder is self-contained.
 
 ### What to generate vs. what to flag as missing
 
@@ -733,15 +962,24 @@ JSON evidence file is referenced from inside that digest. When a citation
 batch row carries a `digest_file` field, use it for the digest column;
 otherwise repeat the `evidence_file` path or leave the column as `—`.
 
-| Ref | Source | Cited by | Location | Lines | Console / Portal | Local digest | Purpose |
-|---|---|---|---|---|---|---|---|
-| [CR-001] | repo | `01-system-design/system-design-evidence.md` | `Dockerfile` | 1-1 | [open](https://github.com/owner/repo/blob/abc123/Dockerfile#L1) | — | Base image / runtime version |
-| [CR-002] | repo | `01-system-design/system-design-evidence.md` | `docker-compose.yml` | 3-28 | [open](https://github.com/owner/repo/blob/abc123/docker-compose.yml#L3-L28) | — | Service topology |
-| [CR-042] | sharepoint | `10-security-policies/security-policies-evidence.md` | `SSP-v2.docx` | — | [open](https://contoso.sharepoint.com/sites/ato/Shared%20Documents/SSP-v2.docx) | `10-security-policies/evidence/sharepoint_SSP-v2.docx` | Prior SSP baseline |
-| [CR-051] | aws | `04-access-control/access-control-evidence.md` | `arn:aws:iam::123456789012:role/app-runtime` | — | [open](https://console.aws.amazon.com/iam/home?region=us-east-1#/roles/app-runtime) | [aws_iam-role-app-runtime.md](04-access-control/evidence/aws_iam-role-app-runtime.md) | Runtime role trust policy + effective permissions |
-| [CR-063] | azure | `16-network-communications/network-communications-evidence.md` | `/subscriptions/.../nsg-app-web` | — | [open](https://portal.azure.com/#@tenant/resource/subscriptions/.../nsg-app-web) | [azure_nsg-app-web.md](16-network-communications/evidence/azure_nsg-app-web.md) | NSG ingress rules |
-| [CR-078] | smb | `09-contingency-plan/contingency-plan-evidence.md` | `smb://fileserver/ato/DR-runbook.pdf` | — | `smb://fileserver/ato/DR-runbook.pdf` | `09-contingency-plan/evidence/smb_DR-runbook.pdf` | DR runbook (copied to evidence/) |
+| Ref | Source | Controls | Cited by | Location | Lines | Console / Portal | Local digest | Purpose |
+|---|---|---|---|---|---|---|---|---|
+| [CR-001] | repo | CM-2, CM-6 | `ssp-sections/01-system-description/system-description-evidence.md`; `controls/CM-configuration-management/cm-implementation.md` | `Dockerfile` | 1-1 | [open](https://github.com/owner/repo/blob/abc123/Dockerfile#L1) | — | Base image / runtime version |
+| [CR-002] | repo | PL-2, SC-7 | `ssp-sections/01-system-description/system-description-evidence.md`; `controls/SC-system-communications-protection/sc-implementation.md` | `docker-compose.yml` | 3-28 | [open](https://github.com/owner/repo/blob/abc123/docker-compose.yml#L3-L28) | — | Service topology |
+| [CR-042] | sharepoint | PL-2 | `ssp-sections/06-policies-procedures/policies-procedures-evidence.md` | `SSP-v2.docx` | — | [open](https://contoso.sharepoint.com/sites/ato/Shared%20Documents/SSP-v2.docx) | `ssp-sections/06-policies-procedures/evidence/sharepoint_SSP-v2.docx` | Prior SSP baseline |
+| [CR-051] | aws | AC-2, AC-3, AC-6 | `controls/AC-access-control/ac-implementation.md` | `arn:aws:iam::123456789012:role/app-runtime` | — | [open](https://console.aws.amazon.com/iam/home?region=us-east-1#/roles/app-runtime) | [aws_iam-role-app-runtime.md](controls/AC-access-control/evidence/AC-2/aws_iam-role-app-runtime.md) | Runtime role trust policy + effective permissions |
+| [CR-063] | azure | SC-7, SC-7(5) | `controls/SC-system-communications-protection/sc-implementation.md` | `/subscriptions/.../nsg-app-web` | — | [open](https://portal.azure.com/#@tenant/resource/subscriptions/.../nsg-app-web) | [azure_nsg-app-web.md](controls/SC-system-communications-protection/evidence/SC-7/azure_nsg-app-web.md) | NSG ingress rules |
+| [CR-078] | smb | CP-2, CP-9, CP-10 | `ssp-sections/08-contingency-plan/contingency-plan-evidence.md`; `controls/CP-contingency-planning/cp-implementation.md` | `smb://fileserver/ato/DR-runbook.pdf` | — | `smb://fileserver/ato/DR-runbook.pdf` | `ssp-sections/08-contingency-plan/evidence/smb_DR-runbook.pdf` | DR runbook (copied to evidence/) |
 ```
+
+The **Controls** column is a comma-separated list of NIST 800-53 Rev 5
+control identifiers that the citation is evidence for. Use the most
+specific identifier you can justify: a control enhancement
+(`AC-2(4)` — automated audit actions for account management) when the
+citation specifically addresses it; a base control (`AC-2`) when it
+covers the family-level requirement; or a control family code (`AC`)
+only when nothing more specific applies. When in doubt, list one base
+control rather than a wide family — assessors prefer specificity.
 
 ### Link format by source
 
@@ -776,6 +1014,10 @@ Before finalizing:
    collapse to one ID.
 6. The `Source` column must be one of: `repo`, `sharepoint`, `aws`, `azure`,
    `smb`. No other values.
+7. The `Controls` column must list at least one valid NIST 800-53 Rev 5
+   identifier (family code, base control, or enhancement). Empty cells
+   are not permitted — if no control applies, the citation should not
+   exist.
 
 After merging, delete `docs/ato-package/.staging/` — it's a transient handoff
 directory, not part of the final deliverable.
@@ -790,43 +1032,67 @@ directory, not part of the final deliverable.
 > **Repository**: [repo name]
 > **Generated**: [date]
 > **Artifact Guide**: ARTIFACT-GUIDE-800-53.md
-> **Total Sections**: 20
-> **Coverage Summary**: X/20 sections have at least partial coverage
+> **SSP sections**: 14
+> **Control families**: 20 (NIST 800-53 Rev 5)
+> **Coverage**: SSP Y/14 covered · Controls Z/20 with at least partial implementation
 
 ## How to Read This Index
 
-Each control family has one directory at `docs/ato-package/NN-family-slug/`. That
-directory contains:
-- A single generated narrative `{slug}-evidence.md` or `{slug}-gap-analysis.md`
-  sitting at the root (marked DRAFT)
-- An `evidence/` subfolder with every source file that supports the narrative,
-  whether it was direct evidence or a `[CR-NNN]` citation target
+The package has two top-level branches:
 
-The tables below list the generated narrative, its evidence files, and the
-artifact sub-items each covers. `CODE_REFERENCES.md` at the package root resolves
-every `[CR-NNN]` tag to a file, line range, and commit-pinned permalink.
+- `ssp-sections/<NN>-<slug>/` — document-shaped SSP artifacts (SDD,
+  RAR, IRP, CP, CMP, ConMon plan, PIA, etc.). One generated narrative
+  per section, with bundled evidence in `evidence/` (flat).
+- `controls/<CF>-<slug>/` — per-control-family implementation
+  statements, organised by NIST 800-53 Rev 5 family code. Per-control
+  evidence under `evidence/<CONTROL-ID>/`.
 
-## Section 1: System Design Document (SDD)
+`CODE_REFERENCES.md` at the package root resolves every `[CR-NNN]` tag
+to a file/resource, controls covered, and the doc(s) that cite it.
 
-### Narrative Document
-| File | Sub-items Covered | Gaps |
-|---|---|---|
-| `01-system-design/system-design-evidence.md` | System boundary, components, data flows | Missing: formal trust boundary diagram |
+## SSP Sections
 
-### Evidence Files
-| File in `evidence/` | Original Location | Supports |
-|---|---|---|
-| `README.md` | `README.md` | System name, purpose |
-| `Dockerfile` | `Dockerfile` | Runtime baseline |
-| `docker-compose.yml` | `docker-compose.yml` | Component topology |
+### 01 — System Description (SDD)
 
-### Missing Artifacts
-| Required Artifact | Sub-item | Gap Type | Suggested Action |
+> **Controls supported**: PL-2, PL-8, SC-7, SA-3, SA-8
+
+#### Narrative Document
+| File | Sub-items Covered | Controls | Gaps |
 |---|---|---|---|
-| Network topology diagram | Architecture diagrams | REPO-FINDABLE | Create from infrastructure configs |
-| Memory protection docs | Memory protection mechanisms | OPERATIONAL | Document from OS/container configs |
+| `ssp-sections/01-system-description/system-description-evidence.md` | System boundary, components, data flows | PL-2, PL-8, SC-7 | Missing formal trust boundary diagram |
 
-[... repeat for all 20 sections ...]
+#### Evidence Files
+| File in `evidence/` | Original Location | Controls | Supports |
+|---|---|---|---|
+| `README.md` | `README.md` | PL-2 | System name, purpose |
+| `Dockerfile` | `Dockerfile` | CM-2, CM-6 | Runtime baseline |
+| `docker-compose.yml` | `docker-compose.yml` | PL-2, SC-7 | Component topology |
+
+#### Missing Artifacts
+| Required Artifact | Sub-item | Controls | Gap Type | Suggested Action |
+|---|---|---|---|---|
+| Network topology diagram | Architecture diagrams | PL-8, SC-7 | REPO-FINDABLE | Create from infrastructure configs |
+| Memory protection docs | Memory protection mechanisms | SC-39, SC-2 | OPERATIONAL | Document from OS/container configs |
+
+[... repeat for SSP sections 02 through 14 ...]
+
+## Controls Implementation
+
+### AC — Access Control
+
+> **Implementation document**: `controls/AC-access-control/ac-implementation.md`
+> **Controls in scope** (system at MODERATE baseline): AC-1, AC-2, AC-2(1), AC-2(2), AC-2(3), AC-2(4), AC-3, AC-4, AC-5, AC-6, AC-6(1), AC-6(2), AC-6(5), AC-6(7), AC-6(9), AC-6(10), AC-7, AC-8, AC-11, AC-12, AC-14, AC-17, AC-17(1), AC-17(2), AC-17(3), AC-17(4), AC-18, AC-18(1), AC-19, AC-19(5), AC-20, AC-20(1), AC-20(2), AC-21, AC-22
+
+#### Coverage
+| Control | Status | Evidence | SSP cross-reference | Notes |
+|---|---|---|---|---|
+| AC-1 | YELLOW | `ssp-sections/06-policies-procedures/evidence/ac-1-policy.md` | `06-policies-procedures` | Policy exists, procedure missing |
+| AC-2 | GREEN | `evidence/AC-2/` (3 files) | — | |
+| AC-2(4) | RED | — | — | No automated audit-action evidence |
+| AC-3 | GREEN | `evidence/AC-3/` (4 files) | `01-system-description` | |
+| ... | ... | ... | ... | ... |
+
+[... repeat for control families AT, AU, CA, CM, CP, IA, IR, MA, MP, PE, PL, PM, PS, PT, RA, SA, SC, SI, SR ...]
 
 ## Missing Artifact Summary
 
@@ -847,8 +1113,8 @@ every `[CR-NNN]` tag to a file, line range, and commit-pinned permalink.
 | INFRASTRUCTURE | X | Infrastructure / Cloud team |
 | INHERITED | X | CSP FedRAMP package |
 
-### By Section
-[Table showing each of the 20 sections with total sub-items, covered count, gap count]
+### By Family / Section
+[Table showing each control family + each SSP section with total sub-items, covered count, gap count]
 ```
 
 ### CHECKLIST.md Structure
@@ -858,6 +1124,7 @@ every `[CR-NNN]` tag to a file, line range, and commit-pinned permalink.
 
 > **Repository**: [repo name]
 > **Generated**: [date]
+> **System impact level**: LOW | MODERATE | HIGH (drives the in-scope control list per family)
 
 ## Legend
 - GREEN: Artifact exists and covers the requirement
@@ -865,28 +1132,45 @@ every `[CR-NNN]` tag to a file, line range, and commit-pinned permalink.
 - RED: No evidence found — action needed
 - GRAY: Likely inherited from CSP or shared service
 
-## Section 1: System Design Document (SDD)
+## SSP Sections
 
-| # | Sub-item | Status | Evidence | Notes |
+### 01 — System Description (SDD)
+
+| # | Sub-item | Controls | Status | Evidence | Notes |
+|---|---|---|---|---|---|
+| 1.1 | System name, purpose, description | PL-2 | GREEN | README.md | |
+| 1.2 | System boundary definition | PL-2, SC-7 | YELLOW | Generated from Docker/K8s configs | Missing formal boundary diagram |
+| 1.3 | Architecture diagrams | PL-8, SC-7 | RED | — | Need network topology, data flow diagrams |
+| 1.4 | Component descriptions | CM-8 | GREEN | Generated from package manifests | |
+| 1.5 | Data flows | PL-2, AC-4 | YELLOW | Partial from route definitions | Need external system data flows |
+| ... | ... | ... | ... | ... | ... |
+
+[... repeat for SSP sections 02 through 14 ...]
+
+## Controls Implementation
+
+### AC — Access Control
+
+| Control | Title | Status | Evidence | Notes |
 |---|---|---|---|---|
-| 1.1 | System name, purpose, description | GREEN | README.md | |
-| 1.2 | System boundary definition | YELLOW | Generated from Docker/K8s configs | Missing formal boundary diagram |
-| 1.3 | Architecture diagrams | RED | — | Need network topology, data flow diagrams |
-| 1.4 | Component descriptions | GREEN | Generated from package manifests | |
-| 1.5 | Data flows | YELLOW | Partial from route definitions | Need external system data flows |
+| AC-1 | Policy and Procedures | YELLOW | `ssp-sections/06-policies-procedures/evidence/ac-1-policy.md` | Procedure missing |
+| AC-2 | Account Management | GREEN | `controls/AC-access-control/evidence/AC-2/` | |
+| AC-2(1) | Automated System Account Management | YELLOW | `controls/AC-access-control/evidence/AC-2(1)/` | Manual today |
+| AC-2(4) | Automated Audit Actions | RED | — | No audit hook |
+| AC-3 | Access Enforcement | GREEN | `controls/AC-access-control/evidence/AC-3/` | |
 | ... | ... | ... | ... | ... |
 
-[... repeat for all 20 sections with every sub-item ...]
+[... repeat for control families AT, AU, CA, CM, CP, IA, IR, MA, MP, PE, PL, PM, PS, PT, RA, SA, SC, SI, SR ...]
 
 ## Summary Statistics
 
-| Status | Count | Percentage |
-|---|---|---|
-| GREEN | X | X% |
-| YELLOW | X | X% |
-| RED | X | X% |
-| GRAY | X | X% |
-| **Total** | **X** | **100%** |
+| Status | SSP sub-items | Controls | Total | Percentage |
+|---|---|---|---|---|
+| GREEN | a | b | a+b | X% |
+| YELLOW | a | b | a+b | X% |
+| RED | a | b | a+b | X% |
+| GRAY | a | b | a+b | X% |
+| **Total** | | | | **100%** |
 ```
 
 ## Important Notes

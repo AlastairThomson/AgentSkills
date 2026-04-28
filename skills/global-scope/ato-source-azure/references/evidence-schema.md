@@ -180,23 +180,23 @@ Two- to four-sentence overview of what the data shows in aggregate.
   "citations": [
     {
       "id_placeholder": "AZ-001",
-      "cited_by": "04-access-control/access-control-evidence.md",
+      "cited_by": "controls/AC-access-control/access-control-evidence.md",
       "location": "/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Authorization/roleAssignments/22222222",
       "link": "https://portal.azure.com/#@contoso/resource/subscriptions/00000000-0000-0000-0000-000000000000/providers/Microsoft.Authorization/roleAssignments/22222222",
       "purpose": "Owner role at subscription scope — assigned to SG-App-Admins",
-      "control_family": "04-access-control",
-      "evidence_file": "04-access-control/evidence/azure_role-assignments.json",
-      "digest_file": "04-access-control/evidence/azure_role-assignment-22222222.md"
+      "control_family": "controls/AC-access-control",
+      "evidence_file": "controls/AC-access-control/evidence/azure_role-assignments.json",
+      "digest_file": "controls/AC-access-control/evidence/azure_role-assignment-22222222.md"
     },
     {
       "id_placeholder": "AZ-002",
-      "cited_by": "16-network-communications/network-communications-evidence.md",
+      "cited_by": "controls/SC-system-communications-protection/network-communications-evidence.md",
       "location": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/app-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-app-web",
       "link": "https://portal.azure.com/#@contoso/resource/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/app-prod/providers/Microsoft.Network/networkSecurityGroups/nsg-app-web/overview",
       "purpose": "Web tier NSG — ingress rules for 443/80",
-      "control_family": "16-network-communications",
-      "evidence_file": "16-network-communications/evidence/azure_nsg-rules.json",
-      "digest_file": "16-network-communications/evidence/azure_nsg-app-web.md"
+      "control_family": "controls/SC-system-communications-protection",
+      "evidence_file": "controls/SC-system-communications-protection/evidence/azure_nsg-rules.json",
+      "digest_file": "controls/SC-system-communications-protection/evidence/azure_nsg-app-web.md"
     }
   ],
   "partial_failures": []
