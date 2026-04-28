@@ -169,19 +169,25 @@ cli_agent_ext() {
 }
 
 # cli_skills_dir <cli>
-# Where to physically install global skills for a given CLI. Three CLIs
-# (opencode, kilo, gemini) all auto-discover ~/.agents/skills/ as a
+# Where to physically install global skills for a given CLI. Four CLIs
+# (opencode, kilo, gemini, codex) all auto-discover ~/.agents/skills/ as a
 # cross-CLI compatibility location, so we install once into ~/.agents/skills/
-# and let those CLIs pick it up. Claude and Codex each need their own
-# canonical path because they don't scan ~/.agents/.
+# and let those CLIs pick it up. Claude is the only CLI that doesn't scan
+# ~/.agents/, so it gets its own dir. Result: at most TWO physical copies
+# on disk regardless of CLI selection — ~/.claude/skills/ and
+# ~/.agents/skills/.
+#
+# Codex was originally installed into ~/.codex/skills/ (its canonical path).
+# Empirically Codex also scans ~/.agents/skills/, so installing into both
+# surfaces every skill twice in Codex's UI. The migration in prune_removed
+# clears stale ~/.codex/skills/ content recorded under the old skills_root.
 #
 # Honours --dest by re-rooting under <DEST>/<bucket>.
 cli_skills_dir() {
     local cli="$1" bucket
     case "$cli" in
-        claude)              bucket=".claude/skills" ;;
-        opencode|kilo|gemini) bucket=".agents/skills" ;;
-        codex)               bucket=".codex/skills" ;;
+        claude)                       bucket=".claude/skills" ;;
+        opencode|kilo|gemini|codex)   bucket=".agents/skills" ;;
         *) die "unknown CLI: $cli" ;;
     esac
     if [ -n "$DEST" ]; then
@@ -589,6 +595,22 @@ manifest_list() {
     ' "$mpath"
 }
 
+# Extract a scalar value (e.g. "skills_root") for a given cli from the
+# existing manifest. Empty string if absent (manifest pre-v3 won't have it).
+manifest_scalar() {
+    local mpath="$1" cli="$2" key="$3"
+    awk -v cli="$cli" -v key="$key" '
+        $0 ~ "\""cli"\":[[:space:]]*{" { in_cli=1; next }
+        in_cli && $0 ~ "\""key"\":" {
+            sub(".*\""key"\":[[:space:]]*\"", "")
+            sub("\".*", "")
+            print
+            exit
+        }
+        in_cli && /^    }/ { in_cli=0 }
+    ' "$mpath"
+}
+
 prune_removed() {
     # For each CLI we just installed, compare the old manifest's per-CLI list
     # to what we just installed. Remove anything that was in the old list but
@@ -611,6 +633,22 @@ prune_removed() {
         local root; root=$(cli_root "$cli")
         local sdir; sdir=$(cli_skills_dir "$cli")
         local ext; ext=$(cli_agent_ext "$cli")
+        local old_sdir; old_sdir=$(manifest_scalar "$mpath.old" "$cli" skills_root)
+
+        # If the old manifest recorded a different skills_root for this CLI,
+        # the previous install put skills somewhere we no longer use. Remove
+        # every skill the old manifest recorded for this CLI from that old
+        # path — the user still has them in the new location, so this is
+        # purely a cleanup. (Empty old_sdir means a pre-v3 manifest with no
+        # skills_root recorded; nothing to migrate.)
+        if [ -n "$old_sdir" ] && [ "$old_sdir" != "$sdir" ]; then
+            local old_skills_at_old_path; old_skills_at_old_path=$(manifest_list "$mpath.old" "$cli" skills)
+            for n in $old_skills_at_old_path; do
+                rm -rf "$old_sdir/$n"
+            done
+            # Remove the directory itself if it's now empty.
+            rmdir "$old_sdir" 2>/dev/null || true
+        fi
 
         case "$skill_paths_seen" in
             *" $sdir "*) ;;
