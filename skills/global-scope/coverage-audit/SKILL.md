@@ -1,4 +1,5 @@
 ---
+name: coverage-audit
 description: "Measure test coverage, filter structurally untestable code, compute adjusted coverage, and rank high-impact gaps. Supports Rust, Python, TypeScript/JS, Swift, Java, Kotlin, Go, Ruby, C#, C/C++, PHP. For deep investigation of a specific gap, delegates to an isolated agent."
 ---
 

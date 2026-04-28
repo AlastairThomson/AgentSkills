@@ -18,18 +18,24 @@ body="$base/agent.md"
 
 description=$(meta_top "$meta" description)
 tools_list=$(meta_top "$meta" tools)
-model=$(meta_top_unquoted "$meta" model)
 mode=$(meta_extras "$meta" opencode mode)
 : "${mode:=subagent}"
+
+# Note: `model` is intentionally not emitted. OpenCode requires fully-qualified
+# `provider/model-id` strings (e.g. `anthropic/claude-sonnet-4-20250514`); our
+# canonical metadata uses bare aliases (opus/sonnet/haiku/inherit) that aren't
+# valid OpenCode IDs. Subagents inherit the invoker's model when `model:` is
+# omitted, which is the right default — the user picks the model in their
+# global OpenCode config.
 
 {
     printf -- '---\n'
     printf 'description: %s\n' "$description"
     printf 'mode: %s\n' "$mode"
-    printf 'model: %s\n' "$model"
     # OpenCode wants tools as a record (map), not an array.
     printf 'tools:\n'
     tools_as_record "$tools_list"
     printf -- '---\n\n'
 }
 cat "$body"
+inline_references "$base"

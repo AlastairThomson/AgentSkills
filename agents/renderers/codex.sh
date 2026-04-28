@@ -17,9 +17,14 @@ body="$base/agent.md"
 
 name=$(meta_top_unquoted "$meta" name)
 description=$(meta_top_unquoted "$meta" description)
-model=$(meta_top_unquoted "$meta" model)
 sandbox_mode=$(meta_extras "$meta" codex sandbox_mode)
 : "${sandbox_mode:=read-only}"
+
+# Note: `model` is intentionally not emitted. Codex expects OpenAI model IDs
+# (e.g. `gpt-5.4-mini`); our canonical metadata uses Claude aliases
+# (opus/sonnet/haiku) that aren't valid Codex IDs. Codex docs confirm `model`
+# is optional in subagent TOML — when omitted, the subagent inherits the
+# parent session's model. The user picks the model in their Codex config.
 
 # TOML literal multiline strings (''' … ''') do not process escapes, which
 # is what we want for prompt bodies that contain regex like \(todo!\) or
@@ -36,7 +41,6 @@ esc_desc=$(printf '%s' "$description" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
 printf 'name = "%s"\n' "$name"
 printf 'description = "%s"\n' "$esc_desc"
-printf 'model = "%s"\n' "$model"
 printf 'sandbox_mode = "%s"\n' "$sandbox_mode"
 printf "developer_instructions = '''\n"
 cat "$body"

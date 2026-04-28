@@ -1,4 +1,5 @@
 ---
+name: skill-interview
 description: "Greenfield project setup: interview the user via AskUserQuestion about the intended AI CLIs (Claude Code, OpenCode, Kilo Code, Codex, Gemini), languages, test frameworks, deployment targets, and compliance/workflow requirements for a new repo, then delegate to `skill-sync` to install the matching subset into each CLI's per-repo directory. Use when starting a fresh repo that has no code yet — for existing repos, use `skill-sync` directly (its detection is more accurate than any interview)."
 ---
 

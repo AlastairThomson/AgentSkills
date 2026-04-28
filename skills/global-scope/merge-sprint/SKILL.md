@@ -1,4 +1,5 @@
 ---
+name: merge-sprint
 description: "Merge a batch of related PRs into the target branch in dependency order, resolve conflicts, verify the build after each merge, and clean up leftover worktrees."
 ---
 

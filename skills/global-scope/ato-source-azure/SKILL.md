@@ -1,10 +1,6 @@
 ---
 name: ato-source-azure
-description: >
-  Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from Azure
-  via the `az` CLI. Invoked by the orchestrator when Azure scope is configured.
-  Strictly read-only, ambient-auth, US-region-only, scope-confirmed. Do not
-  invoke directly unless running an ATO collection.
+description: "Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from Azure via the `az` CLI. Invoked by the orchestrator when Azure scope is configured. Strictly read-only, ambient-auth, US-region-only, scope-confirmed. Do not invoke directly unless running an ATO collection."
 ---
 
 # ATO Source — Azure

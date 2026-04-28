@@ -1,4 +1,5 @@
 ---
+name: deep-review
 description: "Conduct a complete multi-axis review of a software project (feature-integrity, stubs/dead-code, user-journey, test quality, security + full threat model including LLM prompt-injection and agent-to-agent attack paths, reliability, ship hygiene, doc↔code cross-check). Use when the user asks for a 'full audit', 'code review', 'external audit', 'pre-release review', 'threat model', 'is this shippable', 'deep review', or an adversarial review of another agent's work. Delegates to the deep-review agent so the axis-by-axis evidence does not bloat the main conversation's context."
 ---
 

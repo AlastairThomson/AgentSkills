@@ -1,11 +1,6 @@
 ---
 name: ato-source-sharepoint
-description: >
-  Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from SharePoint
-  Online / Microsoft 365 / OneDrive via the pnp/cli-microsoft365 (`m365`) CLI.
-  Invoked by the orchestrator when SharePoint scope is configured. Strictly
-  read-only, ambient-auth, scope-confirmed. Do not invoke this skill directly
-  unless you are running it as part of an ATO artifact collection.
+description: "Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from SharePoint Online / Microsoft 365 / OneDrive via the pnp/cli-microsoft365 (`m365`) CLI. Invoked by the orchestrator when SharePoint scope is configured. Strictly read-only, ambient-auth, scope-confirmed. Do not invoke this skill directly unless you are running it as part of an ATO artifact collection."
 ---
 
 # ATO Source — SharePoint / M365

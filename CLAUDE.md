@@ -30,15 +30,19 @@ A paired stub and agent live in matching scopes — if the stub is global, the a
 
 ## CLI support
 
-| CLI | Global dir | Per-repo dir | Agent file | Identity |
-|---|---|---|---|---|
-| Claude Code | `~/.claude/` | `<repo>/.claude/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
-| OpenCode | `~/.config/opencode/` | `<repo>/.opencode/` | `<name>.md` (MD + YAML, no name) | filename |
-| Kilo Code | `~/.config/kilo/` | `<repo>/.kilo/` | `<name>.md` (MD + YAML, no name) | filename |
-| OpenAI Codex | `~/.codex/` | `<repo>/.codex/` | `<name>.toml` + `AGENTS.md` | TOML `name =` |
-| Gemini CLI | `~/.gemini/` | `<repo>/.gemini/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
+| CLI | Global agents dir | Global skills dir | Per-repo dir | Agent file | Identity |
+|---|---|---|---|---|---|
+| Claude Code | `~/.claude/agents/` | `~/.claude/skills/` | `<repo>/.claude/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
+| OpenCode | `~/.config/opencode/agents/` | `~/.agents/skills/` (shared) | `<repo>/.opencode/` | `<name>.md` (MD + YAML, no name) | filename |
+| Kilo Code | `~/.config/kilo/agents/` | `~/.agents/skills/` (shared) | `<repo>/.kilo/` | `<name>.md` (MD + YAML, no name) | filename |
+| OpenAI Codex | `~/.codex/agents/` | `~/.codex/skills/` | `<repo>/.codex/` | `<name>.toml` + `AGENTS.md` | TOML `name =` |
+| Gemini CLI | `~/.gemini/agents/` | `~/.agents/skills/` (shared) | `<repo>/.gemini/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
 
 The installer (`install.sh --for <cli>[,<cli>...]`) and `skill-sync` both accept a multi-CLI selection. The user chooses which CLIs to install for; each selected CLI gets its own correctly-shaped copy of every agent.
+
+**Skill placement (strategy A — single canonical location, lean on cross-scan):** OpenCode, Kilo, and Gemini all auto-discover `~/.agents/skills/` as a cross-CLI compatibility location, so `install.sh` writes skills there once and lets those three CLIs pick them up. Claude (`~/.claude/skills/`) and Codex (`~/.codex/skills/`) get their own canonical paths because they don't scan `~/.agents/`. Result: **at most three physical copies of any skill on disk regardless of how many CLIs are selected**, and no within-CLI duplicates from cross-scanning.
+
+**Flat-only agent shape for OpenCode / Kilo / Gemini.** Those three CLIs recursively scan their `agents/` directory and register every `.md` file as an agent — including bundled `references/*.md`, which then surface as broken namespaced agents. To avoid that, the renderers for those CLIs **inline bundled references into the agent body** (via `_lib.sh::inline_references`) and the installer always writes them as flat `<name>.md` files. Claude and Codex preserve directory form because they don't have the same scanning trap.
 
 ## Skill anatomy
 
@@ -46,6 +50,7 @@ Every `skills/<name>/` directory contains a `SKILL.md`:
 
 ```markdown
 ---
+name: <skill-name>
 description: "One-line hook the harness uses to decide when to surface this skill."
 ---
 
@@ -54,7 +59,8 @@ description: "One-line hook the harness uses to decide when to surface this skil
 Body: step-by-step instructions, tables, shell snippets.
 ```
 
-- `description` is **required** and is the only field the harness matches against. Write it as a trigger sentence — lead with what the skill does, then when to use it. Keep it ≤200 chars where possible.
+- `name` is **required** and must match the directory name. Claude Code will fall back to the directory name if absent, but OpenCode, Kilo, Codex, and Gemini all require it explicitly per the agent-skills spec — keep it present so a single SKILL.md works across every CLI.
+- `description` is **required** and is the field the harness matches against. Write it as a trigger sentence — lead with what the skill does, then when to use it. Keep it on a single line (Codex's loader has been observed to mishandle folded `>` and literal `|` YAML scalars in some versions); single-quoted scalars are the safe default. Description max length per the spec is 1024 chars.
 - The directory name is the canonical skill identifier.
 - Skills may carry supporting material in sibling folders (e.g. `references/`). Reference those from `SKILL.md` using relative paths.
 
@@ -68,9 +74,9 @@ Every `agents/base/<scope>/<name>/` directory contains:
 agents/base/<scope>/<name>/
   agent.md              # prompt body — no frontmatter
   metadata.yaml         # canonical metadata (name, description, tools, model, extras.*)
-  references/           # optional — copied verbatim into every CLI's install
-  evals/                # optional
-  config.yaml           # optional
+  references/           # optional — copied verbatim for Claude/Codex; inlined into the rendered agent body for OpenCode/Kilo/Gemini
+  evals/                # optional — copied verbatim for Claude/Codex; not installed for OpenCode/Kilo/Gemini
+  config.yaml           # optional — copied verbatim for Claude/Codex; not installed for OpenCode/Kilo/Gemini
 ```
 
 `metadata.yaml` shape:
@@ -89,14 +95,19 @@ extras:                                        # optional per-CLI hints
     sandbox_mode: read-only                    # or workspace-write for agents that write files
 ```
 
+`model:` is authored using the canonical Claude aliases (`opus` / `sonnet` / `haiku` / `inherit`). Only the Claude renderer emits the value verbatim — Claude understands those aliases natively. The OpenCode, Kilo, Gemini, and Codex renderers **drop the field** because each of those CLIs expects its own provider/model-id format and would reject a bare alias. Subagents inherit the invoker's model when `model:` is absent, which is the right default — the user picks the model in their CLI's global config rather than having every agent hard-code one.
+
 At install time, each renderer at `agents/renderers/<cli>.sh` reads the agent's base directory and emits the CLI's native format:
 
 - `claude.sh` / `gemini.sh` → Markdown with `name:` frontmatter
 - `opencode.sh` / `kilo.sh` → Markdown without `name:` (filename is authoritative); adds `mode:`
-- `codex.sh` → TOML with `developer_instructions = """<body>"""`
+- `codex.sh` → TOML with `developer_instructions = '''<body>'''`
 - `codex-agents-md.sh` → `AGENTS.md` inventory listing every installed agent
 
-Agents that bundle `references/`, `evals/`, or `config.yaml` are installed as directory-form (`<cli-root>/agents/<name>/<name>.<ext>`); simple agents land as flat files (`<cli-root>/agents/<name>.<ext>`).
+**Agent shape per CLI:**
+
+- **Claude / Codex** — agents that bundle `references/`, `evals/`, or `config.yaml` install as directory-form (`<cli-root>/agents/<name>/<name>.<ext>`) so the bundled files sit alongside the rendered agent. Simple agents land flat.
+- **OpenCode / Kilo / Gemini** — always flat (`<cli-root>/agents/<name>.<ext>`), regardless of base shape. Those CLIs recursively scan their `agents/` directory and would register every reference `.md` as a broken namespaced agent. Bundled `references/*.md` are inlined into the rendered agent body via `_lib.sh::inline_references` so the agent stays self-contained; `evals/` and `config.yaml` are not installed for these CLIs (they are dev-loop artifacts, not runtime inputs).
 
 **Shape rule:** the rendered frontmatter is CLI-specific, but the body (`agent.md`) is identical across CLIs. When editing an agent, edit `agent.md` — do not touch the rendered output in any CLI install tree. When adding a field that matters for only one CLI, put it under `extras.<cli>.` in `metadata.yaml` and teach that CLI's renderer to honor it.
 

@@ -1,4 +1,5 @@
 ---
+name: ato-artifact-collector
 description: "Collect, generate, and index NIST 800-53 security artifacts from a code repository for federal ATO (Authority to Operate) package preparation. Use whenever the user mentions ATO, NIST 800-53, security package, SSP artifacts, FedRAMP evidence collection, compliance artifacts, security documentation gathering, ATO readiness, compliance gaps, or security documentation completeness for a federal system. Even a casual 'collect security artifacts' or 'what do I need for my ATO' should trigger this skill. Confirms scope with the user, then delegates the multi-step collection to the ato-artifact-collector agent."
 ---
 

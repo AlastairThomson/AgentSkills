@@ -1,4 +1,5 @@
 ---
+name: branch-review
 description: "Review unmerged branches, classify each, produce CHANGES.md, and recommend merge/prune/PR actions. Use when the user asks to audit the branch state or produce a CHANGES.md. Delegates the investigation to the branch-review agent so per-branch evidence does not bloat the main conversation's context."
 ---
 

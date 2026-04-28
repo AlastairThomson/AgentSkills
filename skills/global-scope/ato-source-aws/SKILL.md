@@ -1,10 +1,6 @@
 ---
 name: ato-source-aws
-description: >
-  Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from AWS
-  via the mcp__AWS_API_MCP_Server__call_aws MCP tool. Invoked by the orchestrator
-  when AWS scope is configured. Strictly read-only, ambient-auth, US-region-only,
-  scope-confirmed. Do not invoke directly unless running an ATO collection.
+description: "Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from AWS via the mcp__AWS_API_MCP_Server__call_aws MCP tool. Invoked by the orchestrator when AWS scope is configured. Strictly read-only, ambient-auth, US-region-only, scope-confirmed. Do not invoke directly unless running an ATO collection."
 ---
 
 # ATO Source — AWS
