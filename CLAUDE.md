@@ -35,12 +35,12 @@ A paired stub and agent live in matching scopes — if the stub is global, the a
 | Claude Code | `~/.claude/agents/` | `~/.claude/skills/` | `<repo>/.claude/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
 | OpenCode | `~/.config/opencode/agents/` | `~/.agents/skills/` (shared) | `<repo>/.opencode/` | `<name>.md` (MD + YAML, no name) | filename |
 | Kilo Code | `~/.config/kilo/agents/` | `~/.agents/skills/` (shared) | `<repo>/.kilo/` | `<name>.md` (MD + YAML, no name) | filename |
-| OpenAI Codex | `~/.codex/agents/` | `~/.codex/skills/` | `<repo>/.codex/` | `<name>.toml` + `AGENTS.md` | TOML `name =` |
+| OpenAI Codex | `~/.codex/agents/` | `~/.agents/skills/` (shared) | `<repo>/.codex/` | `<name>.toml` + `AGENTS.md` | TOML `name =` |
 | Gemini CLI | `~/.gemini/agents/` | `~/.agents/skills/` (shared) | `<repo>/.gemini/` | `<name>.md` (MD + YAML) | frontmatter `name:` |
 
 The installer (`install.sh --for <cli>[,<cli>...]`) and `skill-sync` both accept a multi-CLI selection. The user chooses which CLIs to install for; each selected CLI gets its own correctly-shaped copy of every agent.
 
-**Skill placement (strategy A — single canonical location, lean on cross-scan):** OpenCode, Kilo, and Gemini all auto-discover `~/.agents/skills/` as a cross-CLI compatibility location, so `install.sh` writes skills there once and lets those three CLIs pick them up. Claude (`~/.claude/skills/`) and Codex (`~/.codex/skills/`) get their own canonical paths because they don't scan `~/.agents/`. Result: **at most three physical copies of any skill on disk regardless of how many CLIs are selected**, and no within-CLI duplicates from cross-scanning.
+**Skill placement (strategy A — single canonical location, lean on cross-scan):** OpenCode, Kilo, Gemini, and Codex all auto-discover `~/.agents/skills/` as a cross-CLI compatibility location, so `install.sh` writes skills there once and lets those four CLIs pick them up. Claude is the only CLI that doesn't scan `~/.agents/`, so it gets its own `~/.claude/skills/`. Result: **at most two physical copies of any skill on disk regardless of how many CLIs are selected**, and no within-CLI duplicates — important for Codex specifically, which scans both `~/.codex/skills/` and `~/.agents/skills/` and would surface every skill twice if we wrote to both.
 
 **Flat-only agent shape for OpenCode / Kilo / Gemini.** Those three CLIs recursively scan their `agents/` directory and register every `.md` file as an agent — including bundled `references/*.md`, which then surface as broken namespaced agents. To avoid that, the renderers for those CLIs **inline bundled references into the agent body** (via `_lib.sh::inline_references`) and the installer always writes them as flat `<name>.md` files. Claude and Codex preserve directory form because they don't have the same scanning trap.
 
