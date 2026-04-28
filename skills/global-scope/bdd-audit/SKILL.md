@@ -1,4 +1,5 @@
 ---
+name: bdd-audit
 description: "Audit BDD spec coverage: classify each feature area as wired/unwired/truly-missing/deferred and produce a prioritised build-vs-test action list. Use when the user asks about BDD coverage, Gherkin specs, step wiring, or whether unimplemented scenarios represent missing tests or missing features. Delegates the multi-file investigation to the bdd-audit agent."
 ---
 

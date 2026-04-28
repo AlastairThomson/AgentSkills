@@ -71,6 +71,34 @@ toml_guard_body() {
     fi
 }
 
+# inline_references <base-dir>
+# Emit each .md file from <base-dir>/references/ as a markdown section,
+# concatenated to stdout. Used by opencode/kilo/gemini renderers to keep
+# rendered agents flat (agents/<name>.md) — those CLIs recursively scan
+# agents/<name>/references/*.md and register every reference doc as a
+# (broken, frontmatter-less) namespaced agent. Inlining the references
+# avoids that scanning trap and keeps the agent self-contained.
+inline_references() {
+    local base="$1"
+    local refs="$base/references"
+    [ -d "$refs" ] || return 0
+
+    local found=0
+    for f in "$refs"/*.md; do
+        [ -f "$f" ] || continue
+        if [ "$found" = 0 ]; then
+            printf '\n\n---\n\n'
+            printf '## Bundled references (inlined)\n\n'
+            printf 'The references below are bundled with this agent. The body above may say "see `references/<name>.md`" — the contents of those files are inlined below verbatim. Do not attempt to `Read` the relative paths; scroll to the matching section.\n\n'
+            found=1
+        fi
+        local name; name=$(basename "$f")
+        printf -- '---\n\n### `references/%s`\n\n' "$name"
+        cat "$f"
+        printf '\n\n'
+    done
+}
+
 # tools_as_record <tools-array-string> [indent]
 # Converts a YAML inline list like `[Bash, Read, Write]` into a YAML record
 # (map) with lowercase keys and `true` values. Optional indent arg (default 2

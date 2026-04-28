@@ -1,11 +1,6 @@
 ---
 name: ato-source-smb
-description: >
-  Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from SMB /
-  Windows file shares. Cross-platform: macOS (mount_smbfs), Linux (mount.cifs
-  or gvfs), Windows (direct UNC paths). Strictly read-only, ambient-auth,
-  depth-limited, scope-confirmed. Do not invoke directly unless running an ATO
-  collection.
+description: "Sibling of ato-artifact-collector. Collects NIST 800-53 evidence from SMB / Windows file shares. Cross-platform: macOS (mount_smbfs), Linux (mount.cifs or gvfs), Windows (direct UNC paths). Strictly read-only, ambient-auth, depth-limited, scope-confirmed. Do not invoke directly unless running an ATO collection."
 ---
 
 # ATO Source — SMB / Windows File Shares

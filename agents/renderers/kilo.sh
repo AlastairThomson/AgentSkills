@@ -18,18 +18,23 @@ body="$base/agent.md"
 
 description=$(meta_top "$meta" description)
 tools_list=$(meta_top "$meta" tools)
-model=$(meta_top_unquoted "$meta" model)
 mode=$(meta_extras "$meta" kilo mode)
 : "${mode:=subagent}"
+
+# Note: `model` is intentionally not emitted. Kilo expects fully-qualified
+# `provider/model-id` strings (e.g. `anthropic/claude-sonnet-4-20250514`); our
+# canonical metadata uses bare aliases (opus/sonnet/haiku/inherit) that aren't
+# valid Kilo IDs. Subagents inherit the invoker's model when `model:` is
+# omitted — the user picks the model in their global Kilo config.
 
 {
     printf -- '---\n'
     printf 'description: %s\n' "$description"
     printf 'mode: %s\n' "$mode"
-    printf 'model: %s\n' "$model"
     # Kilo uses the same record-form tools schema as OpenCode.
     printf 'tools:\n'
     tools_as_record "$tools_list"
     printf -- '---\n\n'
 }
 cat "$body"
+inline_references "$base"

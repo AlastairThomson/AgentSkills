@@ -1,4 +1,5 @@
 ---
+name: repo-health
 description: "Start-of-session health check: branch state, open PRs, build status, test failures, coverage trend, and leftover worktrees. Auto-detects language. Produces a single status panel."
 ---
 

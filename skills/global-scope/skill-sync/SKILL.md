@@ -1,4 +1,5 @@
 ---
+name: skill-sync
 description: "Provision a repo's per-CLI agent and skill directories (.claude/, .opencode/, .kilo/, .codex/, .gemini/) with only the artifacts relevant to its languages and workflow. Detects toolchains (Cargo.toml, package.json, pyproject.toml, Package.swift, *.csproj, go.mod, Gemfile, CMakeLists.txt, composer.json, DESCRIPTION, *.sas, Makefile.PL, .sql), fetches the matching subset from an org-configured GitHub source repo, renders every agent through the per-CLI renderer for every CLI the user installed for, and writes a .sync-manifest.json for idempotent re-runs. Modes: apply, --dry-run, --status, --prune. Accepts --for <cli>[,<cli>...] to override the CLI set. Ambient gh auth. Use when setting up a new repo, after adding/removing a language, or after adding a new CLI to your global install."
 ---
 
@@ -47,7 +48,7 @@ agents/
 
 **Agent rendering.** `skill-sync` never copies `agents/base/<scope>/<name>/agent.md` verbatim. Instead, for each CLI in play, it pipes the base agent through `agents/renderers/<cli>.sh` to produce the CLI's native format (Markdown+YAML for Claude/OpenCode/Kilo/Gemini; TOML for Codex).
 
-**`skill-sync` only ever fetches from `skills/repo-scope/` and `agents/base/repo-scope/`.** The `global-scope/` subtrees are the responsibility of a separate one-time install (`install.sh`) into each CLI's global directory — they are always available regardless of which repo the user is working in, so installing them per-repo would just duplicate them.
+**`skill-sync` only ever fetches from `skills/repo-scope/` and `agents/base/repo-scope/`.** The `global-scope/` subtrees are the responsibility of a separate one-time install (`install.sh`) — they are always available regardless of which repo the user is working in, so installing them per-repo would just duplicate them. Globally, `install.sh` writes skills to **at most three physical locations** regardless of how many CLIs are selected: `~/.claude/skills/` (Claude only), `~/.codex/skills/` (Codex only), and `~/.agents/skills/` (shared by OpenCode + Kilo + Gemini, all of which auto-discover that path). Within `~/.<cli>/agents/`, each selected CLI gets its own rendered agents.
 
 A thin-stub skill in `skills/repo-scope/<name>/SKILL.md` may delegate to an agent in `agents/base/repo-scope/<name>/`. When a skill advertises an agent delegate, **both** are installed together; they are versioned as a pair and recorded as a pair in the manifest.
 
@@ -75,7 +76,7 @@ For each selected CLI the install shape is:
 
 Codex additionally gets `<repo>/.codex/AGENTS.md` — an inventory of installed agents rendered via `agents/renderers/codex-agents-md.sh`.
 
-**Why skills are Claude-only per-repo for now.** `skill-sync` installs repo-scope skills into `.claude/skills/` only, because the other CLIs either don't consume a `SKILL.md` format or consume it with different semantics (e.g., Kilo's `skills:` priority tier is distinct from Claude's). Agents are portable; skills are not — yet. When the skill-file format is generalized to a CLI-agnostic source with per-CLI renderers (mirroring the agent pattern), `skill-sync` will install repo-scope skills across all selected CLIs.
+**Why skills are Claude-only per-repo for now.** Per-repo skill placement is still Claude-only here even though OpenCode, Kilo, Gemini, and Codex all support `SKILL.md` natively at the global tier — `install.sh` (global) handles them via the cross-scan compatibility paths (`~/.agents/skills/` for OpenCode/Kilo/Gemini, dedicated dirs for Claude/Codex). Per-repo skill scanning paths differ by CLI (e.g., `<repo>/.opencode/skills/` vs `<repo>/.kilo/skills/` vs `<repo>/.gemini/skills/`) and there is no equivalent shared `.agents/skills/` convention at the per-repo tier in every CLI. Until that lands consistently, repo-scope skills go to `.claude/skills/` only and other CLIs read repo-scope content via Claude's directory if they cross-scan it; otherwise per-CLI repo-scope skill placement should be added when there is a real need.
 
 ## When to run
 

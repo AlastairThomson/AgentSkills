@@ -1,4 +1,5 @@
 ---
+name: auth-config
 description: "Resolve credentials for external resources (AWS, Azure, SharePoint/M365, SMB, model-provider APIs) via `~/.agent-skills/auth/auth.yaml`. Supports 1Password, Bitwarden, LastPass, Keeper, HashiCorp Vault, macOS Keychain, Windows Credential Manager, Linux libsecret, OAuth interactive flows, env vars, and user scripts. Use when a skill is about to make a credentialed external call (AWS/Azure/SharePoint/SMB discovery, LLM API call from a multi-model agent) and needs to validate the session first. Read-only — never writes credentials."
 ---
 

@@ -18,15 +18,20 @@ body="$base/agent.md"
 name=$(meta_top_unquoted "$meta" name)
 description=$(meta_top "$meta" description)
 tools=$(meta_top "$meta" tools)
-model=$(meta_top_unquoted "$meta" model)
+
+# Note: `model` is intentionally not emitted. Gemini's model field expects
+# Gemini-family IDs (e.g. `gemini-3-flash-preview`) or the literal `inherit`;
+# our canonical metadata uses Claude aliases (opus/sonnet/haiku) that aren't
+# valid Gemini IDs. Omitting the field defaults to `inherit`, which is the
+# right behavior — the user picks the model in their Gemini config.
 
 cat <<EOF
 ---
 name: $name
 description: $description
-model: $model
 tools: $tools
 ---
 
 EOF
 cat "$body"
+inline_references "$base"

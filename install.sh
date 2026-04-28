@@ -168,6 +168,29 @@ cli_agent_ext() {
     esac
 }
 
+# cli_skills_dir <cli>
+# Where to physically install global skills for a given CLI. Three CLIs
+# (opencode, kilo, gemini) all auto-discover ~/.agents/skills/ as a
+# cross-CLI compatibility location, so we install once into ~/.agents/skills/
+# and let those CLIs pick it up. Claude and Codex each need their own
+# canonical path because they don't scan ~/.agents/.
+#
+# Honours --dest by re-rooting under <DEST>/<bucket>.
+cli_skills_dir() {
+    local cli="$1" bucket
+    case "$cli" in
+        claude)              bucket=".claude/skills" ;;
+        opencode|kilo|gemini) bucket=".agents/skills" ;;
+        codex)               bucket=".codex/skills" ;;
+        *) die "unknown CLI: $cli" ;;
+    esac
+    if [ -n "$DEST" ]; then
+        printf '%s/%s' "$DEST" "$bucket"
+    else
+        printf '%s/%s' "$HOME" "$bucket"
+    fi
+}
+
 # ---- validate --for -------------------------------------------------------
 normalize_for() {
     # Strip spaces, expand commas, dedupe, validate each.
@@ -306,6 +329,19 @@ agent_is_dir_form() {
     [ -d "$d/references" ] || [ -d "$d/evals" ] || [ -f "$d/config.yaml" ]
 }
 
+# Some CLIs recursively scan their agents/ directory and register every .md
+# file (including bundled references/*.md) as a separate, broken, namespaced
+# agent. To avoid that, we install agents flat for those CLIs regardless of
+# whether the base bundles references — the renderer inlines the references
+# into the agent body instead. Codex (.toml) and Claude don't have this
+# problem.
+cli_uses_flat_only() {
+    case "$1" in
+        opencode|kilo|gemini) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # Copy every sibling file/dir (references, evals, config.yaml) alongside the
 # rendered agent. Does NOT copy metadata.yaml or agent.md — those live only
 # in the base tree.
@@ -328,19 +364,20 @@ list_install_set() {
     echo "Selected CLIs: $CLIS"
     for cli in $CLIS; do
         local root; root=$(cli_root "$cli")
+        local sdir; sdir=$(cli_skills_dir "$cli")
         echo
         echo "--- $cli → $root ---"
-        if [ "$cli" = claude ]; then
-            echo "  skills/:"
-            for d in "$src_skills"/*/; do [ -d "$d" ] && echo "    $(basename "$d")"; done
-        fi
+        echo "  skills → $sdir"
+        for d in "$src_skills"/*/; do [ -d "$d" ] && echo "    $(basename "$d")"; done
         echo "  agents/:"
         for d in "$src_agents"/*/; do
             [ -d "$d" ] || continue
             local name ext; name=$(basename "$d"); ext=$(cli_agent_ext "$cli")
-            if agent_is_dir_form "$d"; then
+            if agent_is_dir_form "$d" && ! cli_uses_flat_only "$cli"; then
                 echo "    $name/   (bundles refs)"
                 echo "      $name.$ext (rendered)"
+            elif agent_is_dir_form "$d"; then
+                echo "    $name.$ext   (refs inlined)"
             else
                 echo "    $name.$ext"
             fi
@@ -349,12 +386,14 @@ list_install_set() {
             echo "  AGENTS.md   (installed-agent inventory)"
         fi
     done
+
+    # Note: opencode/kilo/gemini share ~/.agents/skills/ — listed per CLI
+    # above for clarity, but install.sh writes that directory only once.
 }
 
 # ---- install one CLI ------------------------------------------------------
 install_cli() {
     local cli="$1"
-    local src_skills="$STAGE/src/skills/global-scope"
     local src_agents="$STAGE/src/agents/base/global-scope"
     local renderer="$STAGE/src/agents/renderers/$cli.sh"
     local codex_agents_md="$STAGE/src/agents/renderers/codex-agents-md.sh"
@@ -365,19 +404,11 @@ install_cli() {
 
     mkdir -p "$root/agents"
 
-    # skills: only Claude Code has a first-class "skills" directory. Other
-    # CLIs can consume skills as plain markdown but the loading semantics
-    # differ per tool; skip skills for non-claude installs until that's
-    # designed out.
-    if [ "$cli" = claude ]; then
-        mkdir -p "$root/skills"
-        for d in "$src_skills"/*/; do
-            [ -d "$d" ] || continue
-            local n; n=$(basename "$d")
-            rm -rf "$root/skills/$n"
-            cp -R "$d" "$root/skills/$n"
-        done
-    fi
+    # Note: skills are installed by install_skills_dedup() in the main loop,
+    # not here. Each CLI's skills directory is computed by cli_skills_dir,
+    # and opencode/kilo/gemini share ~/.agents/skills/ — installing per-CLI
+    # would write that directory three times. The dedup helper writes each
+    # unique skills directory exactly once.
 
     # agents: render every base agent through this CLI's renderer.
     local bases=()
@@ -386,7 +417,7 @@ install_cli() {
         local name; name=$(basename "$d")
         bases+=("$d")
 
-        if agent_is_dir_form "$d"; then
+        if agent_is_dir_form "$d" && ! cli_uses_flat_only "$cli"; then
             # Directory form: write the rendered file inside <cli-root>/agents/<name>/<name>.<ext>
             local target_dir="$root/agents/$name"
             rm -rf "$target_dir"
@@ -395,7 +426,10 @@ install_cli() {
             "$renderer" "$d" > "$target_dir/$name.$ext"
             copy_agent_bundled "$d" "$target_dir"
         else
-            # Flat form: single file at <cli-root>/agents/<name>.<ext>
+            # Flat form: single file at <cli-root>/agents/<name>.<ext>.
+            # The rm -rf cleans up any residual directory-form layout from a
+            # previous install (important after switching opencode/kilo/gemini
+            # away from directory form).
             rm -rf "$root/agents/$name"
             "$renderer" "$d" > "$root/agents/$name.$ext"
         fi
@@ -405,6 +439,31 @@ install_cli() {
     if [ "$cli" = codex ]; then
         "$codex_agents_md" "${bases[@]}" > "$root/AGENTS.md"
     fi
+}
+
+# ---- install skills (deduped across CLIs) ---------------------------------
+# Walk $CLIS, build the set of unique skills directories (opencode/kilo/gemini
+# all map to ~/.agents/skills/), and write each one exactly once. Echoes the
+# unique directories to stdout, one per line, so the caller can log them.
+install_skills_dedup() {
+    local src_skills="$STAGE/src/skills/global-scope"
+    [ -d "$src_skills" ] || return 0
+
+    local seen=" "
+    for cli in $CLIS; do
+        local sdir; sdir=$(cli_skills_dir "$cli")
+        case "$seen" in *" $sdir "*) continue ;; esac
+        seen="$seen$sdir "
+
+        mkdir -p "$sdir"
+        for d in "$src_skills"/*/; do
+            [ -d "$d" ] || continue
+            local n; n=$(basename "$d")
+            rm -rf "$sdir/$n"
+            cp -R "$d" "$sdir/$n"
+        done
+        printf '%s\n' "$sdir"
+    done
 }
 
 # ---- Kilo defensive -------------------------------------------------------
@@ -458,18 +517,18 @@ write_manifest() {
         cli_idx=$((cli_idx+1))
         local skills_json="" flat_json="" dir_json=""
 
-        if [ "$cli" = claude ]; then
-            for d in "$src_skills"/*/; do
-                [ -d "$d" ] || continue
-                local n; n=$(basename "$d")
-                skills_json="${skills_json}      \"$(json_escape "$n")\",\n"
-            done
-        fi
+        # Skills are now installed for every CLI (same set, possibly into
+        # a shared physical path — see cli_skills_dir).
+        for d in "$src_skills"/*/; do
+            [ -d "$d" ] || continue
+            local n; n=$(basename "$d")
+            skills_json="${skills_json}      \"$(json_escape "$n")\",\n"
+        done
 
         for d in "$src_agents"/*/; do
             [ -d "$d" ] || continue
             local n; n=$(basename "$d")
-            if agent_is_dir_form "$d"; then
+            if agent_is_dir_form "$d" && ! cli_uses_flat_only "$cli"; then
                 dir_json="${dir_json}      \"$(json_escape "$n")\",\n"
             else
                 flat_json="${flat_json}      \"$(json_escape "$n")\",\n"
@@ -485,6 +544,7 @@ write_manifest() {
 
         blocks="$blocks    \"$cli\": {\n"
         blocks="$blocks      \"root\": \"$(json_escape "$(cli_root "$cli")")\",\n"
+        blocks="$blocks      \"skills_root\": \"$(json_escape "$(cli_skills_dir "$cli")")\",\n"
         blocks="$blocks      \"skills\": [\n$skills_json\n      ],\n"
         blocks="$blocks      \"agents_flat\": [\n$flat_json\n      ],\n"
         blocks="$blocks      \"agents_dir\": [\n$dir_json\n      ]\n"
@@ -493,14 +553,14 @@ write_manifest() {
 
     {
         printf '{\n'
-        printf '  "version": 2,\n'
+        printf '  "version": 3,\n'
         printf '  "source": {\n'
         printf '    "repo": "%s",\n' "$(json_escape "$REPO")"
         printf '    "ref": "%s",\n' "$(json_escape "$REF")"
         printf '    "resolved_sha": "%s"\n' "$(json_escape "$resolved_sha")"
         printf '  },\n'
         printf '  "installed_at": "%s",\n' "$(iso_now)"
-        printf '  "installer_version": 2,\n'
+        printf '  "installer_version": 3,\n'
         printf '  "clis": ['
         local first=1
         for cli in $CLIS; do
@@ -533,22 +593,35 @@ prune_removed() {
     # For each CLI we just installed, compare the old manifest's per-CLI list
     # to what we just installed. Remove anything that was in the old list but
     # is no longer in the source tree.
+    #
+    # Skills can share a physical directory across CLIs (~/.agents/skills/),
+    # so we dedup the prune set by path — pruning the same skill twice is
+    # idempotent but pruning a skill another CLI still uses would be a bug.
+    # Since prune only removes skills that are gone from source entirely,
+    # all CLIs lose them at once, so per-path dedup is just an efficiency
+    # win, not a correctness one.
     local mpath; mpath=$(manifest_path)
     [ -f "$mpath.old" ] || return 0
 
     local src_skills="$STAGE/src/skills/global-scope"
     local src_agents="$STAGE/src/agents/base/global-scope"
 
+    local skill_paths_seen=" "
     for cli in $CLIS; do
         local root; root=$(cli_root "$cli")
+        local sdir; sdir=$(cli_skills_dir "$cli")
         local ext; ext=$(cli_agent_ext "$cli")
 
-        if [ "$cli" = claude ]; then
-            local old_skills; old_skills=$(manifest_list "$mpath.old" claude skills)
-            for n in $old_skills; do
-                [ -d "$src_skills/$n" ] || rm -rf "$root/skills/$n"
-            done
-        fi
+        case "$skill_paths_seen" in
+            *" $sdir "*) ;;
+            *)
+                skill_paths_seen="$skill_paths_seen$sdir "
+                local old_skills; old_skills=$(manifest_list "$mpath.old" "$cli" skills)
+                for n in $old_skills; do
+                    [ -d "$src_skills/$n" ] || rm -rf "$sdir/$n"
+                done
+                ;;
+        esac
 
         local old_flat old_dir
         old_flat=$(manifest_list "$mpath.old" "$cli" agents_flat)
@@ -577,13 +650,40 @@ uninstall() {
     echo "  manifest: $mpath"
     confirm "Proceed?" || { echo "aborted"; exit 1; }
 
+    # Compute which CLIs from the manifest will remain after this uninstall.
+    # A shared skills_dir (e.g. ~/.agents/skills/) is only safe to remove if
+    # NO remaining CLI still maps to it.
+    local all_clis_in_manifest
+    all_clis_in_manifest=$(awk '/"clis":/ { sub(".*\\[",""); sub("\\].*",""); gsub(/[",]/," "); print; exit }' "$mpath")
+    local remaining_clis=""
+    for c in $all_clis_in_manifest; do
+        case " $target_clis " in
+            *" $c "*) ;;
+            *) remaining_clis="${remaining_clis:+$remaining_clis }$c" ;;
+        esac
+    done
+
+    local skill_paths_processed=" "
     for cli in $target_clis; do
         local root; root=$(cli_root "$cli")
+        local sdir; sdir=$(cli_skills_dir "$cli")
         local ext; ext=$(cli_agent_ext "$cli")
 
-        if [ "$cli" = claude ]; then
-            for n in $(manifest_list "$mpath" claude skills); do rm -rf "$root/skills/$n"; done
-        fi
+        # Skills: only remove if no remaining CLI shares this physical path.
+        case "$skill_paths_processed" in
+            *" $sdir "*) ;;
+            *)
+                skill_paths_processed="$skill_paths_processed$sdir "
+                local sdir_still_used=0
+                for rc in $remaining_clis; do
+                    [ "$(cli_skills_dir "$rc")" = "$sdir" ] && { sdir_still_used=1; break; }
+                done
+                if [ "$sdir_still_used" = 0 ]; then
+                    for n in $(manifest_list "$mpath" "$cli" skills); do rm -rf "$sdir/$n"; done
+                fi
+                ;;
+        esac
+
         for n in $(manifest_list "$mpath" "$cli" agents_flat); do rm -f "$root/agents/$n.$ext"; done
         for n in $(manifest_list "$mpath" "$cli" agents_dir);  do rm -rf "$root/agents/$n"; done
         [ "$cli" = codex ] && rm -f "$root/AGENTS.md"
@@ -654,8 +754,15 @@ case "$ACTION" in
 
         echo "Installing …"
         for cli in $CLIS; do
-            echo "  • $cli"
+            echo "  • $cli (agents)"
             install_cli "$cli"
+        done
+
+        # Skills install once per unique physical path (opencode/kilo/gemini
+        # all share ~/.agents/skills/).
+        echo "Installing skills …"
+        install_skills_dedup | while read -r installed_path; do
+            echo "  • skills → $installed_path"
         done
 
         # Resolve SHA if we cloned with git, else leave as the ref.

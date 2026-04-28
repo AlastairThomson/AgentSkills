@@ -1,4 +1,5 @@
 ---
+name: auth-interview
 description: "Interactive setup for ~/.agent-skills/auth/auth.yaml — walks the user through which external sources (AWS, Azure, SharePoint/M365, SMB) they use, which LLM providers they use (Anthropic, OpenAI, Gemini, Groq, HuggingFace, Mistral, Cohere, local Ollama/llama.cpp/vLLM), and where each credential is stored (1Password, Bitwarden, Keeper, Vault, macOS Keychain, Windows Credential Manager, Linux libsecret, OAuth interactive, env vars, or a custom script). Writes the config with chmod 0600. Use when the user says 'set up auth', 'configure credentials', 'first-time setup', or when `auth-config` reports no config file exists."
 ---
 
