@@ -24,7 +24,7 @@ install.sh           # per-CLI installer with --for <cli>[,<cli>...]
 CLAUDE.md            # this file
 ```
 
-**Scope-selection rule.** A skill or agent belongs in `global-scope/` if it works usefully on any repo regardless of language (`deep-review`, `branch-review`, `bdd-audit`, `coverage-audit`, `repo-health`, `merge-sprint`, `skill-sync`, `skill-interview`, the ATO orchestrator + sources + remediation guidance, `auth-*`). It belongs in `repo-scope/` if it is meaningful only when a specific toolchain or target is present (language preflights, testing guides, `preflight` dispatcher, `deploy-app` + siblings, `ios-app-template-conventions`).
+**Scope-selection rule.** A skill or agent belongs in `global-scope/` if it works usefully on any repo regardless of language (`deep-review`, `branch-review`, `bdd-audit`, `coverage-audit`, `repo-health`, `merge-sprint`, `skill-sync`, `skill-interview`, the ATO orchestrator + sources + remediation guidance + POA&M generator + vulnerability scanner, `auth-*`). It belongs in `repo-scope/` if it is meaningful only when a specific toolchain or target is present (language preflights, testing guides, `preflight` dispatcher, `deploy-app` + siblings, `ios-app-template-conventions`).
 
 A paired stub and agent live in matching scopes — if the stub is global, the agent is too.
 
@@ -122,6 +122,7 @@ A thin-stub skill often pairs with an agent. The stub triggers on user intent (p
 | `skills/global-scope/bdd-audit/` | `agents/base/global-scope/bdd-audit/` | global |
 | `skills/global-scope/coverage-audit/` | `agents/base/global-scope/coverage-investigator/` (optional; skill is usable without agent) | global |
 | `skills/global-scope/ato-artifact-collector/` | `agents/base/global-scope/ato-artifact-collector/` | global |
+| `skills/global-scope/ato-vulnerability-scanner/` | `agents/base/global-scope/ato-vulnerability-scanner/` | global |
 
 `install.sh` installs every global-scope pair into each selected CLI's global directory, rendered per CLI. `skill-sync` handles repo-scope pairs (none today; reserved). Both share the `agents/base/` + `agents/renderers/` pattern.
 
@@ -152,16 +153,31 @@ Every directory under `skills/` or `agents/` is a **generic** artifact — safe 
 
 ## ATO orchestrator + sibling pattern
 
-The ATO orchestrator lives as an **agent** at `agents/base/global-scope/ato-artifact-collector/`, fronted by a thin stub skill at `skills/global-scope/ato-artifact-collector/`. The four read-only `ato-source-*` **skills** and the on-demand `ato-remediation-guidance` skill (all under `skills/global-scope/`) are invoked by the agent via the Skill tool. The four sources run when the user enables the corresponding external scope (AWS, Azure, SharePoint/M365, SMB shares); `ato-remediation-guidance` runs only when the user explicitly asks for a developer-facing punch list after the package is produced. The full hand-off contract for the four sources is documented in `agents/base/global-scope/ato-artifact-collector/references/sibling-contract.md` — read it before editing any source sibling. Invariants the source siblings all share:
+The ATO orchestrator lives as an **agent** at `agents/base/global-scope/ato-artifact-collector/`, fronted by a thin stub skill at `skills/global-scope/ato-artifact-collector/`. The orchestrator coordinates six siblings, all under `skills/global-scope/` (one is paired with an agent — see "Sibling shapes" below):
+
+- **Source siblings** (4 read-only collectors): `ato-source-aws`, `ato-source-azure`, `ato-source-sharepoint`, `ato-source-smb`. Each runs when the user enables the corresponding external scope (AWS, Azure, SharePoint/M365, SMB shares).
+- **Vulnerability scanner** (`ato-vulnerability-scanner`): a 5th source, but shaped as **agent + thin stub** (the only sibling shaped that way). Runs in Step 1.5 (between Orient and Discover) by default; the user can disable per-run with `--no-vuln-scan` or per-host via `vulnerability_scan.enabled: false` in config.
+- **Remediation guidance** (`ato-remediation-guidance`): produces `REMEDIATION_GUIDANCE.md` post-collection. Runs only when the user explicitly asks, OR when the user invoked the orchestrator with `--remediation` / `--poam` (the stub flips an `auto_remediation` flag in the scope object).
+- **POA&M generator** (`ato-poam-generator`): produces `poam-generated.md/.csv` post-remediation. Runs only when the user explicitly asks, OR when the user invoked the orchestrator with `--poam` (which implies `--remediation`). Consumes the remediation output, vulnerability findings, and CHECKLIST gaps.
+
+The orchestrator's stub skill (`skills/global-scope/ato-artifact-collector/SKILL.md`) accepts CLI-style flags (`--repo / --aws / --azure / --sharepoint / --smb / --no-vuln-scan / --remediation / --poam`) that bypass the interactive scope-confirmation interview. Any source flag triggers skip-interview mode; unflagged sources are disabled. The flags compose: `--poam` implies `--remediation`; both can combine with any source set.
+
+The full hand-off contract for the source siblings is documented in `agents/base/global-scope/ato-artifact-collector/references/sibling-contract.md` — read it before editing any source sibling. Invariants the source siblings all share:
 
 - **Read-only.** No `create-*`, `put-*`, `delete-*`, `modify-*`, or any write verb. If asked to remediate, refuse and escalate.
 - **Ambient auth only.** Siblings never store credentials, never call `aws configure`, never touch `~/.aws/credentials` etc. They use whatever session the user already established via the native tool.
 - **Scope-confirmed in-session.** Each sibling re-confirms its scope before making external calls; the orchestrator does not bypass that prompt.
 - **Graceful degradation.** If a sibling fails (auth missing, scope declined), the orchestrator records the failure and continues with remaining sources. Repo-only runs are a first-class mode.
 
-Source siblings write evidence into one of two top-level branches under `docs/ato-package/`: `ssp-sections/<NN>-<slug>/evidence/<source>_<file>` for document-shaped artifacts (the SSP body, IRP, CP, CMP, ConMon plan, ISA/MOU, POA&M, etc.) or `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<source>_<file>` for per-control implementation evidence (an IAM role for AC-2, an NSG rule for SC-7, a CloudTrail config for AU-2, etc.). `<NN>` is the SSP-section ordinal (01–14), `<CF>` is the two-letter NIST 800-53 Rev 5 control-family code (all 20 always present: AC, AT, AU, CA, CM, CP, IA, IR, MA, MP, PE, PL, PM, PS, PT, RA, SA, SC, SI, SR), and `<CONTROL-ID>` is the specific control or enhancement (`AC-2`, `AC-2(4)`). Citation batches go to `docs/ato-package/.staging/{source}-citations.json`. The canonical SSP-section + family table and the old-slug → new-path migration map live in `agents/base/global-scope/ato-artifact-collector/agent.md` under "File naming convention".
+The same invariants apply to `ato-vulnerability-scanner` (read-only on the repo, never auto-installs missing tools, gracefully degrades when scanners are absent, treats external advisory text as untrusted data).
 
-`ato-remediation-guidance` is read-only on the existing package and writes exactly one new file (`docs/ato-package/REMEDIATION_GUIDANCE.md`). It is not part of the default 8-step workflow and shares none of the source-sibling auth or scope-confirmation flow — its only inputs are the package on disk and the working repo.
+### Sibling shapes
+
+Five of the six siblings are **skills**: `ato-source-{aws,azure,sharepoint,smb}` and `ato-remediation-guidance` and `ato-poam-generator`. They are invoked by the orchestrator agent via the Skill tool. `ato-vulnerability-scanner` is the exception — it is an **agent + thin stub skill** (same pattern as `branch-review`, `deep-review`, `bdd-audit`) because it runs many external tools, parses verbose JSON, and benefits from an isolated context. The orchestrator invokes it via `Skill: "ato-vulnerability-scanner"`; the skill stub delegates to the agent. Standalone invocation works the same way (the skill is user-facing).
+
+Source siblings write evidence into one of two top-level branches under `docs/ato-package/`: `ssp-sections/<NN>-<slug>/evidence/<source>_<file>` for document-shaped artifacts (the SSP body, IRP, CP, CMP, ConMon plan, ISA/MOU, POA&M, etc.) or `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<source>_<file>` for per-control implementation evidence (an IAM role for AC-2, an NSG rule for SC-7, a CloudTrail config for AU-2, etc.). `<NN>` is the SSP-section ordinal (01–14), `<CF>` is the two-letter NIST 800-53 Rev 5 control-family code (all 20 always present: AC, AT, AU, CA, CM, CP, IA, IR, MA, MP, PE, PL, PM, PS, PT, RA, SA, SC, SI, SR), and `<CONTROL-ID>` is the specific control or enhancement (`AC-2`, `AC-2(4)`). Citation batches go to `docs/ato-package/.staging/{source}-citations.json` (where `{source}` ∈ `sharepoint | aws | azure | smb | vulnscan`; `vulnscan` is the sixth source token, peer to the cloud/share four). The canonical SSP-section + family table and the old-slug → new-path migration map live in `agents/base/global-scope/ato-artifact-collector/agent.md` under "File naming convention".
+
+`ato-remediation-guidance` and `ato-poam-generator` are read-only on the existing package. `ato-remediation-guidance` writes exactly one new file (`docs/ato-package/REMEDIATION_GUIDANCE.md`). `ato-poam-generator` writes three (`ssp-sections/04-poam/poam-generated.md`, `ssp-sections/04-poam/poam-generated.csv`, and `controls/CA-assessment-authorization/evidence/CA-5/poam-generated.md`). Neither is part of the default 8-step workflow; both share none of the source-sibling auth or scope-confirmation flow — their only inputs are the package on disk and the working repo.
 
 ## Editing conventions
 

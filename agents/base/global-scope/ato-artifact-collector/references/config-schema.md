@@ -133,6 +133,36 @@ smb:
     - .pdf
     - .md
     - .txt
+
+vulnerability_scan:                           # Pre-collection vulnerability baseline
+                                              # (Step 1.5 of the agent workflow).
+  enabled: true                               # Default true. Set false to skip the scan
+                                              # by config; equivalent to `--no-vuln-scan`.
+                                              # The CLI flag wins when both are present.
+  tools_allowlist:                            # Optional: restrict to a subset of scanners.
+    []                                        # Empty list (or omitted) means "run every
+                                              # available tool". When non-empty, only the
+                                              # listed tools are invoked even if others are
+                                              # on PATH. Valid entries: cargo-audit,
+                                              # npm-audit, pip-audit, safety, bundler-audit,
+                                              # govulncheck, dotnet-list, dependency-check,
+                                              # composer-audit, trivy, gitleaks, semgrep,
+                                              # osv-scanner.
+  secret_scan_enabled: true                   # Default true. When false, gitleaks is
+                                              # skipped even if installed (use this when
+                                              # the repo has many test fixtures that
+                                              # gitleaks consistently false-positives on).
+
+poam:                                         # POA&M generator behavior (post-Step-8).
+  enabled: false                              # Default false — POAM generation is opt-in
+                                              # via the `--poam` flag. When set true here,
+                                              # POAM is generated on every run that
+                                              # completes Step 8.
+  severity_to_due_date:                       # SLA mapping in days from detection date.
+    Critical: 15                              # Common federal practice; assessors may
+    High: 30                                  # require tighter windows.
+    Moderate: 90
+    Low: 180
 ```
 
 ## US-region allow lists
@@ -357,6 +387,12 @@ The orchestrator rejects a config that:
   `client_secret`, `api_key`, `secret_access_key`, `refresh_token`, etc.) —
   these are forbidden; all auth is ambient. The Azure helper script IS allowed
   to touch secrets internally; the config file is not.
+- Sets `vulnerability_scan.tools_allowlist` to a tool name not on the
+  allow-list above (cargo-audit, npm-audit, pip-audit, safety, bundler-audit,
+  govulncheck, dotnet-list, dependency-check, composer-audit, trivy, gitleaks,
+  semgrep, osv-scanner)
+- Sets `poam.severity_to_due_date` with a non-positive integer or a missing
+  key from the canonical set {Critical, High, Moderate, Low}
 
 On validation failure, the skill prints the offending field path and refuses
 to proceed. The user fixes the config and re-runs.

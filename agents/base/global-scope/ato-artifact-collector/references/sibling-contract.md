@@ -117,6 +117,17 @@ Source prefixes:
   (almost always control-folder)
 - `smb_*` — copies from SMB shares (mix of SSP-section docs and
   control evidence — depends on what the file is)
+- `vulnscan` (no prefix on filenames) — the vulnerability scanner
+  writes dated finding reports as
+  `vulnerability-scan-{YYYY-MM-DD}.md` directly into
+  `controls/RA-risk-assessment/evidence/RA-5/`,
+  `controls/SI-system-information-integrity/evidence/SI-2/`, and
+  `ssp-sections/10-vulnerability-mgmt-plan/evidence/`. The dated
+  filename is itself the source identifier; no `vulnscan_*` prefix
+  is applied. The scanner is invoked as an **agent + thin stub** rather
+  than a skill (the only sibling shaped that way) and runs in Step 1.5,
+  before the cloud/share siblings — so its citation batch is in
+  `.staging/` by the time Step 7's merge runs.
 
 The slug and routing target come from the discovery-pattern table in
 the sibling's own `references/discovery-patterns.md`, which

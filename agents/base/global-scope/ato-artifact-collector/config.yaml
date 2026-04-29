@@ -55,3 +55,21 @@ azure:
 
 smb:
   enabled: false
+
+# Pre-collection vulnerability scan (Step 1.5 of the agent workflow).
+# Default-on; the user can disable per-run with --no-vuln-scan.
+vulnerability_scan:
+  enabled: true
+  # tools_allowlist: []                      # Empty = run every available tool
+  secret_scan_enabled: true
+
+# POA&M generator (post-Step-8 follow-on). Default-off — opt-in via --poam.
+# POA&M rows expect ISSO review (Point of Contact, Resources Required), so the
+# generator is not enabled by default the way vulnerability_scan is.
+poam:
+  enabled: false
+  severity_to_due_date:
+    Critical: 15
+    High: 30
+    Moderate: 90
+    Low: 180
