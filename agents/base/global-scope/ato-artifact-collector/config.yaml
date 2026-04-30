@@ -73,3 +73,17 @@ poam:
     High: 30
     Moderate: 90
     Low: 180
+
+# Per-Determine-If-ID assessment scaffolding. PR-A defaults to false — the
+# orchestrator scaffolds the per-sub-control narrative structure but leaves
+# Result + Findings columns blank. PR-B (assessment pass + synthesized drafts)
+# flips this to true. The CLI flag --no-assessment forces false.
+assessment:
+  enabled: false
+
+# GRC assessment CSV emission (Step 6.7). Default-on — every run emits
+# per-family <cf>-assessment.csv plus a master controls/_master-assessment.csv
+# for direct ingestion into GRC tools.
+csv_export:
+  enabled: true
+  master_file: true

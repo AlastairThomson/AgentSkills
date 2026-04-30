@@ -163,6 +163,27 @@ poam:                                         # POA&M generator behavior (post-S
     High: 30                                  # require tighter windows.
     Moderate: 90
     Low: 180
+
+assessment:                                   # Per-Determine-If-ID assessment scaffolding
+                                              # (sub-control narrative iteration + GRC CSV).
+  enabled: false                              # PR-A default: false. The orchestrator emits
+                                              # the per-Determine-If-ID narrative scaffolding
+                                              # but leaves Result + Findings columns blank.
+                                              # Set true once PR-B (assessment pass +
+                                              # synthesized drafts) is installed; the CLI
+                                              # flag `--no-assessment` forces this to false.
+                                              # See `references/sub-control-enumeration.md`
+                                              # for the inventory schema.
+
+csv_export:                                   # GRC assessment CSV emission (Step 6.7).
+  enabled: true                               # Default true. When false, no
+                                              # `<cf>-assessment.csv` files are written
+                                              # and `_master-assessment.csv` is skipped.
+  master_file: true                           # Default true. When false, only per-family
+                                              # CSVs are emitted; the master CSV
+                                              # (`controls/_master-assessment.csv`) is
+                                              # skipped. Useful when the package consumer
+                                              # works exclusively per-family.
 ```
 
 ## US-region allow lists
@@ -393,6 +414,9 @@ The orchestrator rejects a config that:
   semgrep, osv-scanner)
 - Sets `poam.severity_to_due_date` with a non-positive integer or a missing
   key from the canonical set {Critical, High, Moderate, Low}
+- Sets `assessment.enabled` to a value other than `true` or `false`
+- Sets `csv_export.enabled` to a value other than `true` or `false`
+- Sets `csv_export.master_file` to a value other than `true` or `false`
 
 On validation failure, the skill prints the offending field path and refuses
 to proceed. The user fixes the config and re-runs.

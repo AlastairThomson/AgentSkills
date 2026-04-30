@@ -10,6 +10,8 @@ that maps everything to the artifact guide and a CHECKLIST.md with per-item stat
 - `references/config-schema.md` — schema for `.ato-package.yaml`.
 - `references/generation-patterns.md` — how to write each narrative section and its Mermaid diagrams.
 - `references/artifact-mappings.md` — file-pattern → artifact-family mapping table.
+- `references/sub-control-enumeration.md` — Step 4.5 reference: how to build the `.staging/sub-control-inventory.json` and the sub-control naming rules.
+- `references/csv-schema.md` — Step 6.7 reference: the per-family `<cf>-assessment.csv` and master `_master-assessment.csv` schema and RFC-4180 quoting rules.
 - `config.yaml` — default config. Users override via `.ato-package.yaml` at their repo root.
 
 Read the relevant reference at each step. Do not try to load them all upfront.
@@ -40,27 +42,37 @@ defines what artifacts are needed. If it doesn't exist, use the reference copy a
 ## High-Level Workflow
 
 ```
-0.   SCOPE     → Read config + flag-resolved scope from the stub, build scope object
-1.   ORIENT    → Understand the repo: language, framework, infrastructure, existing docs
-1.5. VULNSCAN  → Pre-collection vulnerability baseline via the ato-vulnerability-scanner
-                 agent (gated: skip if --no-vuln-scan or vulnerability_scan.enabled:false)
-2.   DISCOVER  → Scan for files matching each of the 20 artifact categories
-                 (also: invoke enabled sibling skills to populate evidence/ + .staging/)
-3.   COLLECT   → Copy or reference existing artifacts into docs/ato-package/
-4.   GENERATE  → Synthesize documents from scattered sources where no single artifact exists
-                 (embed Mermaid sequence/activity diagrams alongside mechanism narratives;
-                  use [CR-NNN] citation IDs — which may be pre-registered by sibling skills)
-5.   ANALYZE   → Deep code analysis for security-relevant patterns
-6.   GAP       → Identify what's missing per sub-item
-7.   CITATIONS → Merge [CR-NNN] citations (repo + sibling staging batches, including
-                 vulnscan-citations.json) into CODE_REFERENCES.md with a Source column
-                 and per-source link format
-8.   INDEX     → Produce INDEX.md and CHECKLIST.md
+0.    SCOPE        → Read config + flag-resolved scope from the stub, build scope object
+1.    ORIENT       → Understand the repo: language, framework, infrastructure, existing docs
+1.5.  VULNSCAN     → Pre-collection vulnerability baseline via the ato-vulnerability-scanner
+                     agent (gated: skip if --no-vuln-scan or vulnerability_scan.enabled:false)
+2.    DISCOVER     → Scan for files matching each of the 20 artifact categories
+                     (also: invoke enabled sibling skills to populate evidence/ + .staging/)
+3.    COLLECT      → Copy or reference existing artifacts into docs/ato-package/
+4.    GENERATE     → Synthesize documents from scattered sources where no single artifact exists
+                     (embed Mermaid sequence/activity diagrams alongside mechanism narratives;
+                      use [CR-NNN] citation IDs — which may be pre-registered by sibling skills)
+4.5.  ENUMERATE    → Build .staging/sub-control-inventory.json — every Determine If ID
+                     for every in-scope control (sub-letters, enhancements, enhancement-with-sub-letter).
+                     Drives every downstream sub-control step.
+4.6.  SC-ROUTE     → Sub-control evidence routing — emit
+                     evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/_relevant-evidence.md
+                     manifests pointing at parent-level evidence files.
+5.    ANALYZE      → Deep code analysis for security-relevant patterns
+6.    GAP          → Identify what's missing per sub-item;
+                     per-family narrative iterates EVERY Determine If ID with H3 sub-sections
+                     (Method/Determine If Statement; placeholder Result/Findings — populated by PR-B)
+6.7.  CSV          → Emit per-family <cf>-assessment.csv and _master-assessment.csv
+                     (9-column GRC schema, RFC-4180 quoting; Result/Findings columns blank in PR-A)
+7.    CITATIONS    → Merge [CR-NNN] citations (repo + sibling staging batches, including
+                     vulnscan-citations.json) into CODE_REFERENCES.md with a Source column
+                     and per-source link format
+8.    INDEX        → Produce INDEX.md and CHECKLIST.md (sub-control rollup + CSV links)
 
 After Step 8 (only when triggered by stub flags):
-9.   REMEDIATION → If auto_remediation, invoke ato-remediation-guidance skill
-10.  POAM        → If auto_poam, invoke ato-poam-generator skill (consumes the
-                   remediation output + vuln-scan findings + checklist gaps)
+9.    REMEDIATION  → If auto_remediation, invoke ato-remediation-guidance skill
+10.   POAM         → If auto_poam, invoke ato-poam-generator skill (consumes the
+                     remediation output + vuln-scan findings + checklist gaps)
 ```
 
 ### Running repo-only
@@ -394,11 +406,20 @@ docs/ato-package/
 │   └── 14-privacy-impact-assessment/
 │
 └── controls/
+    ├── _master-assessment.csv                  ← Master GRC CSV (Step 6.7)
     ├── AC-access-control/
-    │   ├── ac-implementation.md                ← Family-level narrative
-    │   └── evidence/                           ← Per-control evidence
-    │       ├── AC-2/
-    │       ├── AC-3/
+    │   ├── ac-implementation.md                ← Family-level narrative (Determine If ID H3 sections)
+    │   ├── ac-assessment.csv                   ← Per-family GRC CSV (Step 6.7)
+    │   └── evidence/                           ← Parent-level files + per-Determine-If-ID manifests
+    │       ├── AC-02/
+    │       │   ├── <parent-level files>        ← Files physically copied here
+    │       │   ├── AC-02(a)/_relevant-evidence.md   ← Step 4.6 manifest
+    │       │   ├── AC-02(d)/_relevant-evidence.md
+    │       │   ├── AC-02(01)/_relevant-evidence.md
+    │       │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md
+    │       ├── AC-03/                          ← Single Determine If ID — no nesting
+    │       │   ├── <parent-level files>
+    │       │   └── _relevant-evidence.md
     │       └── ...
     ├── AT-awareness-training/
     ├── AU-audit-accountability/
@@ -614,13 +635,25 @@ generated document per section, with bundled evidence under
 | 13 | `continuous-monitoring-plan` | `ssp-sections/13-continuous-monitoring-plan/` | `continuous-monitoring-plan-gap-analysis.md` | The ConMon strategy and sampling plan (CA-7) |
 | 14 | `privacy-impact-assessment` | `ssp-sections/14-privacy-impact-assessment/` | `privacy-impact-assessment-gap-analysis.md` | PIA / SORN / privacy threshold analysis (PT-1 onward) |
 
+Two reserved filenames produced by Step 6.7 (GRC assessment CSV emission):
+
+| Where it lives | Filename | Producer | Notes |
+|---|---|---|---|
+| `controls/<CF>-<slug>/` | `<cf>-assessment.csv` | Step 6.7 | One CSV per family. 9 columns (Family ID, Family, Control ID, Control, Determine If ID, Determine If Statement, Method, Result, Findings). One row per Determine If ID. RFC-4180 quoting. See `references/csv-schema.md`. |
+| `controls/` (root) | `_master-assessment.csv` | Step 6.7 | All 20 family CSVs concatenated, single header. Sort: Family ID alphabetical → Control ID → Determine If ID. Designed for direct ingestion into GRC tools. |
+
 #### Control families (20)
 
 All 20 NIST 800-53 Rev 5 families always appear, even when a family is
 fully INHERITED or fully OPERATIONAL — empty folders carry a
 `{cf}-implementation.md` that documents the gap explicitly. Per-control
-evidence sits under `evidence/<CONTROL-ID>/` (e.g.
-`evidence/AC-2/`, `evidence/AC-2(4)/`).
+evidence sits under `evidence/<CONTROL-ID>/` for controls without
+sub-parts (e.g. `evidence/AC-03/`) or under
+`evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/` for controls with multiple
+sub-parts (e.g. `evidence/AC-02/AC-02(a)/`). Enhancements with their
+own sub-parts nest one level deeper
+(`evidence/AC-02/AC-02(12)/AC-02(12)(b)/`). See `references/sub-control-enumeration.md`
+for the full naming rules and the skip-redundant-nesting rule.
 
 | CF | Family name | Directory | Implementation document |
 |---|---|---|---|
@@ -731,44 +764,91 @@ middleware enforces least privilege per **AC-6(1)** by …"]
 
 #### Control-family implementation (`controls/<CF>-<slug>/<cf>-implementation.md`)
 
+The narrative iterates **every Determine If ID** in the sub-control inventory at H3 granularity. Sub-letters of the control body (`AC-02(a)` … `AC-02(l)`), enhancements (`AC-02(01)`), and enhancement-with-sub-letter chains (`AC-02(12)(b)`) each get their own H3 sub-section. The H2 holds the family-level rollup; the H3 carries the per-Determine-If-ID assessment row's worth of content.
+
+In **PR-A**, every H3 sub-section emits Method + Determine If Statement plus **placeholder** Result and Findings blocks. The assessment pass (PR-B, Step 6.5) populates Result/Findings.
+
 ```markdown
 # [Family name] — Implementation Statement
 
 > **Generated**: [date]
 > **Status**: DRAFT — requires human review and completion
 > **Control Family**: AC — Access Control
-> **Controls in scope**: AC-1, AC-2, AC-2(4), AC-3, AC-6, AC-6(1), AC-17, AC-19
-> **SSP cross-references**: `ssp-sections/06-policies-procedures/` (for AC-1), `ssp-sections/01-system-description/` (for boundary)
+> **Controls in scope**: AC-01, AC-02, AC-02(01), AC-02(04), AC-03, AC-06, AC-06(01), AC-17, AC-19
+> **Sub-control inventory**: `.staging/sub-control-inventory.json` (lists every Determine If ID below)
+> **SSP cross-references**: `ssp-sections/06-policies-procedures/` (for AC-01), `ssp-sections/01-system-description/` (for boundary)
 
 ## Sources Used
 
 | Ref | Controls | What was extracted |
 |---|---|---|
+| [CR-042] | AC-02 | Application role definitions |
+| [CR-043] | AC-02, AC-03 | Role-check middleware |
 | ... | ... | ... |
 
-## AC-1 — Policy and Procedures
+## AC-02 — Account Management
 
-> **Status**: GREEN | YELLOW | RED | INHERITED
-> **Evidence**: `evidence/AC-1/` (or "Inherited from {provider}")
+> **Status (rolled up)**: YELLOW
+> **Evidence root**: `evidence/AC-02/`
+> **Determine If items**: 12 (n Satisfied, n NotSatisfied, n blank — populated in PR-B)
 
-[Narrative implementation statement for AC-1, citing `[CR-NNN]` IDs.]
+### AC-02(a) — Define account types
 
-## AC-2 — Account Management
+> **Method**: Review
+> **Result**: _Pending assessment pass — see PR-B_
+> **Evidence**: `evidence/AC-02/AC-02(a)/_relevant-evidence.md`
 
-> **Status**: YELLOW
-> **Evidence**: `evidence/AC-2/`
+**Determine If Statement.** [Implementation narrative drawn from collected evidence and the Step 4 generated content. Cites `[CR-NNN]` IDs inline. This is the paragraph the GRC CSV's `Determine If Statement` column ingests.]
 
-[Narrative.]
+**Findings.** _Pending assessment pass — see PR-B._
 
-### AC-2(4) — Automated Audit Actions
+### AC-02(d) — Specify account attributes
 
-> **Status**: RED
-> **GAP**: ...
+> **Method**: Review
+> **Result**: _Pending assessment pass — see PR-B_
+> **Evidence**: `evidence/AC-02/AC-02(d)/_relevant-evidence.md`
 
-[... one section per control and per enhancement actually in scope for the system's
-baseline. Skip enhancements that aren't required at the system's impact level
-(LOW / MODERATE / HIGH).]
+**Determine If Statement.** [Implementation narrative for the part(s) of the requirement that have evidence. Cite `[CR-NNN]`. If the system implements role enforcement but no role-classification artifact, the narrative says so honestly: "AMIS authorizes only NIH-Login-authenticated users whose NED IDs have been pre-provisioned... [CR-042][CR-043]. The four application roles (`ADMINISTRATOR`, `DATA_ENTERER`, `VIEWER`, `INVESTIGATOR`) are defined in code but no artifact maps these roles onto the Privileged / Non-Privileged / No-Logical-Access categories the requirement names."]
+
+**Findings.** _Pending assessment pass — see PR-B._
+
+### AC-02(01) — Automated System Account Management
+
+> **Method**: Review
+> **Result**: _Pending assessment pass — see PR-B_
+> **Evidence**: `evidence/AC-02/AC-02(01)/_relevant-evidence.md`
+
+**Determine If Statement.** [Narrative.]
+
+**Findings.** _Pending assessment pass — see PR-B._
+
+[... one H3 sub-section per Determine If ID actually in scope for the system's
+baseline. The inventory drives this — every entry in the inventory's
+`determine_if_ids` arrays gets one H3, even when the system has no
+implementation for it (in which case the Determine If Statement paragraph
+is "_No implementation found in repo or external sources._" and Result will
+be `NotSatisfied` after PR-B).]
+
+## AC-03 — Access Enforcement
+
+> **Status (rolled up)**: GREEN
+> **Evidence root**: `evidence/AC-03/`
+> **Determine If items**: 1 (the control itself; no sub-letters)
+
+### AC-03 — Access Enforcement
+
+> **Method**: Review
+> **Result**: _Pending assessment pass — see PR-B_
+> **Evidence**: `evidence/AC-03/_relevant-evidence.md`
+
+**Determine If Statement.** [Narrative.]
+
+**Findings.** _Pending assessment pass — see PR-B._
 ```
+
+**Why every Determine If ID gets a section even when no implementation exists.** The CSV consumer (GRC tool, federal reviewer) needs the full enumeration. A Determine If ID that's silently absent from the narrative looks like an authoring oversight, not a deliberate gap. Emitting an H3 with an explicit "no implementation found" Determine If Statement makes the gap legible.
+
+**Why placeholder Result/Findings in PR-A.** The assessment pass (PR-B) is a separate read of the narrative-against-requirement. PR-A scaffolds the structure so PR-B has somewhere to write; the placeholder is honest about where the work splits.
 
 **Control-ID style.** Use the canonical NIST 800-53 Rev 5 dotted form:
 family code (`AC`), base control (`AC-2`), control enhancement
@@ -789,11 +869,16 @@ shapes:
 - `ssp-sections/<NN>-<slug>/evidence/` is **flat** — every supporting file
   for the section narrative sits at the top of the folder. No
   per-control sub-folders.
-- `controls/<CF>-<slug>/evidence/` is **per-control** — files are
-  grouped under `evidence/<CONTROL-ID>/` (e.g. `evidence/AC-2/`,
-  `evidence/AC-2(4)/`, `evidence/AC-3/`). When evidence covers multiple
-  controls in the same family, copy it into every applicable
-  per-control sub-folder.
+- `controls/<CF>-<slug>/evidence/` is **per-control with sub-control
+  manifests** — files physically live at `evidence/<CONTROL-ID>/` (e.g.
+  `evidence/AC-02/`, `evidence/AC-03/`); per-Determine-If-ID
+  sub-folders (e.g. `evidence/AC-02/AC-02(a)/`) carry a
+  `_relevant-evidence.md` **manifest** that references the parent-level
+  files by relative path. Files are NOT duplicated into every
+  sub-control folder — the manifest pattern (Step 4.6) keeps the
+  package compact. Files only physically live under a sub-control
+  folder when they are uniquely produced for that sub-control (e.g., a
+  synthesized draft from Step 6.6, generated in PR-B).
 
 ```
 ssp-sections/01-system-description/
@@ -805,34 +890,51 @@ ssp-sections/01-system-description/
     └── architecture-diagram.png
 
 controls/AC-access-control/
-├── ac-implementation.md            ← Family-level implementation statement
-└── evidence/                       ← Per-control
-    ├── AC-2/
-    │   ├── UserController.php
-    │   └── account-lifecycle.md
-    ├── AC-3/
+├── ac-implementation.md            ← Family-level narrative (per-Determine-If-ID H3 sub-sections)
+├── ac-assessment.csv               ← Per-family GRC CSV (Step 6.7)
+└── evidence/                       ← Per-control + sub-control manifests
+    ├── AC-02/
+    │   ├── auth.ts                 ← Parent-level evidence (collected/copied here)
+    │   ├── role-check-middleware.ts
+    │   ├── role-matrix.yaml
+    │   ├── AC-02(a)/
+    │   │   └── _relevant-evidence.md   ← Manifest (Step 4.6) — points at parent-level files
+    │   ├── AC-02(b)/
+    │   │   └── _relevant-evidence.md
+    │   ├── AC-02(d)/
+    │   │   └── _relevant-evidence.md   ← (PR-B may add a synthesized/ subfolder here)
+    │   ├── AC-02(01)/
+    │   │   └── _relevant-evidence.md
+    │   └── AC-02(12)/
+    │       └── AC-02(12)(b)/
+    │           └── _relevant-evidence.md
+    ├── AC-03/                      ← Single Determine If ID = control ID, no sub-control nesting
     │   ├── AuthFilter.php
-    │   └── RoleFilter.php
-    ├── AC-6/
-    │   └── role-matrix.yaml
+    │   └── _relevant-evidence.md
+    ├── AC-06/
+    │   ├── ...
     └── AC-17/
-        └── vpn-config.md
+        ├── ...
 ```
 
-**How to do it:**
+**How to do it (Steps 3 + 4 produce the parent-level files; Step 4.6 produces the manifests):**
+
 1. After writing each generated document, read back its "Sources Used"
    table and every `[CR-NNN]` citation in the narrative.
 2. For each cited file that isn't already in the destination
    `evidence/` folder, `cp` it there. For control-family docs, that
-   destination is `evidence/<CONTROL-ID>/`; for SSP-section docs it's
-   the flat `evidence/`.
+   destination is `evidence/<CONTROL-ID>/` (the parent-level — never
+   into a sub-control sub-folder); for SSP-section docs it's the flat
+   `evidence/`.
 3. If a source file has a generic name that could collide (e.g.
    `config.php` from two different directories), prefix it with enough
    path context to disambiguate.
 4. The same file routinely lands in several places — once in each
    relevant `controls/<CF>/evidence/<CONTROL-ID>/` and once in each
-   relevant `ssp-sections/<NN>-…/evidence/`. That duplication is
-   required so each top-level folder is self-contained.
+   relevant `ssp-sections/<NN>-…/evidence/`. Duplication ACROSS
+   families and SSP sections is required so each top-level folder is
+   self-contained. Duplication WITHIN a family (across sub-control
+   sub-folders) is forbidden — use the Step 4.6 manifest instead.
 
 ### What to generate vs. what to flag as missing
 
@@ -997,6 +1099,102 @@ ASCII.
 - Testing from test configs, test directories
 - Change management from git workflow, PR templates
 
+## Step 4.5: Enumerate sub-controls
+
+Federal assessment patterns evaluate at the **Determine If ID** level — sub-letters of the control body (`AC-02(a)` … `AC-02(l)`), enhancements (`AC-02(01)`), and enhancement-with-sub-letter chains (`AC-02(12)(b)`). Every assessable item is one row in the GRC CSV and one H3 sub-section in the per-family narrative. Step 4.5 builds the inventory that drives both.
+
+**Source.** Default is LLM enumeration: for each in-scope control on the system's baseline, generate the Determine If ID list directly from NIST 800-53 Rev 5 knowledge. Override paths exist for organizations that want deterministic enumeration — see `references/sub-control-enumeration.md` for the bundled-catalog and per-repo-catalog precedence rules and the override file schema.
+
+**Output.** Write `docs/ato-package/.staging/sub-control-inventory.json` per the schema in `references/sub-control-enumeration.md`. Top-level shape:
+
+```json
+{
+  "schema_version": 1,
+  "generated_at": "...",
+  "source": "llm_enumeration | bundled_catalog | repo_catalog_override",
+  "baseline": "LOW | MODERATE | HIGH | TAILORED",
+  "controls": {
+    "AC-02": { "family_id": "AC", "family": "Access Control", "title": "Account Management", "determine_if_ids": [...] },
+    "AC-02(01)": { "family_id": "AC", "title": "Automated System Account Management", "parent_control": "AC-02", "determine_if_ids": [...] },
+    "AC-02(12)": { "...nested sub-letters under enhancement..." },
+    "AC-03": { "...single Determine If ID = control ID..." }
+  }
+}
+```
+
+**Naming rules** (the orchestrator must emit IDs in exactly this form):
+
+- Family code uppercase: `AC`, `IA`, `SC`.
+- Base-control number is two digits, zero-padded: `AC-02`, not `AC-2`.
+- Enhancement number is two digits, zero-padded, in parentheses: `AC-02(01)`, not `AC-02(1)`.
+- Sub-letters are single lowercase letters in parentheses: `AC-02(a)`.
+- Enhancement-with-sub-letter chains: `AC-02(12)(b)`.
+
+The orchestrator MUST normalise legacy unpadded forms (`AC-2`, `AC-2(4)`) on read and emit the padded form on write.
+
+**Validation before the inventory is handed to Step 4.6:**
+
+1. Family coverage — every Control ID belongs to one of the 20 NIST 800-53 Rev 5 families.
+2. Determine If ID uniqueness — no duplicates within or across controls.
+3. Parent linkage — every enhancement entry's `parent_control` is itself a key in the inventory.
+4. Baseline-completeness sanity floor (per-family minimum control set per baseline) — see `references/sub-control-enumeration.md` for the floor.
+
+If validation fails, log the failure, emit the warning into INDEX.md's "Coverage" section, and continue with the salvageable rows.
+
+## Step 4.6: Sub-control evidence routing
+
+The collected and generated evidence from Steps 3 and 4 sits at the **base-control level** (e.g., `controls/AC-access-control/evidence/AC-02/foo.md`). Step 4.6 produces a per-sub-control **manifest** that lists which parent-level evidence files are relevant to each Determine If ID, without duplicating the files themselves.
+
+**Output.** For every Determine If ID in the inventory, create the directory `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/` (with the skip-redundant-nesting rule below) and write a single file `_relevant-evidence.md` inside it.
+
+**Folder paths** (from `references/sub-control-enumeration.md`):
+
+| Determine If ID | Folder path under `controls/<CF>-<slug>/evidence/` |
+|---|---|
+| `AC-02(a)` | `AC-02/AC-02(a)/` |
+| `AC-02(d)` | `AC-02/AC-02(d)/` |
+| `AC-02(01)` | `AC-02/AC-02(01)/` (peer of sub-letters under the same parent) |
+| `AC-02(12)(b)` | `AC-02/AC-02(12)/AC-02(12)(b)/` (nested) |
+| `AC-03` (only Determine If ID for the control is the control itself) | `AC-03/` (skip redundant `AC-03/AC-03/` nesting) |
+
+**Skip-redundant-nesting rule:** if a control's `determine_if_ids` array has exactly one entry whose `id` equals the control's own key, do NOT create a `<CONTROL-ID>/<CONTROL-ID>/` directory — the parent-level `evidence/<CONTROL-ID>/` is the manifest's home.
+
+**Manifest format** (`_relevant-evidence.md`):
+
+```markdown
+# AC-02(d) — Relevant evidence
+
+> **Determine If ID**: AC-02(d)
+> **Control**: AC-02 — Account Management
+> **Determine If statement**: Specify [...]
+> **Generated**: 2026-04-30
+
+The following parent-level evidence files (under `controls/AC-access-control/evidence/AC-02/`) are relevant to this Determine If ID. They are NOT duplicated into this folder; the assessor reads them from the parent location.
+
+| File | Relevance | Citation |
+|---|---|---|
+| `auth.ts` | Defines four application roles | [CR-042] |
+| `role-check-middleware.ts` | Enforces role-based access | [CR-043] |
+| `role-matrix.yaml` | Maps roles to area permissions | [CR-044] |
+
+## Notes
+
+- This file is generated by Step 4.6 of the orchestrator, not by a sibling.
+- A future synthesized draft (PR-B; see `synthesized/` if present) addresses the missing role-classification artifact.
+```
+
+**Decision logic for "relevant".** A parent-level evidence file is relevant to a Determine If ID when:
+
+1. Its citation in `CODE_REFERENCES.md` lists this Determine If ID's parent control or this Determine If ID itself in the `Controls` column.
+2. The narrative paragraphs that cite it (`Cited by` in CODE_REFERENCES.md) describe behaviour that addresses the Determine If ID's `text`.
+3. (Conservative fallback) If neither check resolves, attach the file to every Determine If ID in the parent control. Over-inclusive manifests are corrected during the assessment pass; under-inclusive ones leave assessors searching.
+
+**No file duplication.** The manifest references parent-level files by relative path. Files live under a sub-control folder *only* when they are uniquely produced for that sub-control (e.g., a synthesized draft from Step 6.6, generated in PR-B).
+
+**Side effect.** While walking the inventory, also create the directory tree itself — empty `_relevant-evidence.md` files (with the header but no rows) are emitted for Determine If IDs that have no relevant parent evidence yet. This makes the package's directory tree match the inventory shape, which is what the GRC CSV consumer expects.
+
+After Step 4.6 completes, the package has a complete sub-control directory tree. The per-family narrative (Step 6) iterates this tree.
+
 ## Step 5: Deep Code Analysis
 
 For each security-relevant code pattern, perform targeted analysis:
@@ -1055,6 +1253,65 @@ Categorize each gap:
   obtain it.
 - **INHERITED**: The artifact is likely inherited from a cloud service provider (CSP)
   or shared service. Note which provider and suggest checking their FedRAMP package.
+
+## Step 6.7: Emit GRC assessment CSVs
+
+Walk the per-family narrative (`<cf>-implementation.md`) and the sub-control inventory (`.staging/sub-control-inventory.json`). Emit one CSV per family at `controls/<CF>-<slug>/<cf>-assessment.csv` and a master CSV at `controls/_master-assessment.csv`. The full schema is in `references/csv-schema.md`; key points:
+
+**9-column header (exact, fixed order):**
+
+```
+Family ID,Family,Control ID,Control,Determine If ID,Determine If Statement,Method,Result,Findings
+```
+
+**Per-row population:**
+
+| Column | Source |
+|---|---|
+| Family ID | inventory `family_id` |
+| Family | inventory `family` |
+| Control ID | inventory map key |
+| Control | inventory `title` |
+| Determine If ID | inventory `determine_if_ids[].id` |
+| Determine If Statement | per-family narrative — paragraph immediately after the H3 sub-section's blockquote |
+| Method | constant: `Review` |
+| Result | per-family narrative — `> **Result**:` line. **Blank in PR-A.** Populated in PR-B. |
+| Findings | per-family narrative — paragraph after `**Findings.**` heading. **Blank in PR-A.** Populated in PR-B. |
+
+**Empty rows preserved.** A Determine If ID with no implementation narrative emits a row with all of columns 6–9 blank. This mirrors the federal assessment-spreadsheet pattern and lets the assessor see the full enumeration.
+
+**Sort order within a per-family CSV:**
+
+1. Control ID (numeric-aware: `AC-02` < `AC-03` < `AC-17`).
+2. Determine If ID within the control: sub-letters first (`AC-02(a)`–`AC-02(l)`), then enhancements in numeric order, with enhancement-with-sub-letter immediately under its enhancement.
+
+**Master CSV** = all 20 family CSVs concatenated with a single header row at top, sorted by Family ID alphabetical → Control ID → Determine If ID. No inter-family blank lines, no repeated headers.
+
+**RFC 4180 quoting**:
+
+- Empty field: `,,`
+- Field containing `,`, `"`, `\n`, or leading/trailing whitespace: wrapped in `"..."`
+- Embedded `"` inside a quoted field: doubled to `""`
+- Embedded newlines: preserved as literal `\n` *inside* the quoted field (not escaped)
+- Line endings: `\n` only (no `\r\n`)
+- Encoding: UTF-8 without BOM
+
+**Validation before write:**
+
+1. Re-parse with stdlib CSV reader; halt if it doesn't round-trip.
+2. Row count matches the inventory's Determine If ID count for the family (per-family) or globally (master).
+3. Header row matches the 9-column string exactly.
+4. Every row has exactly 9 fields after RFC 4180 parsing.
+
+**`--no-assessment` flag handling.** When the scope object's `assessment.enabled` is `false`, emit a 7-column CSV instead — drop the Result and Findings columns entirely. Header becomes:
+
+```
+Family ID,Family,Control ID,Control,Determine If ID,Determine If Statement,Method
+```
+
+This produces a smaller, less-busy file for users who only want the implementation-statement scaffolding without an assessment pass.
+
+After Step 6.7 completes, proceed to Step 7 (citation merge).
 
 ## Step 7: Produce CODE_REFERENCES.md
 

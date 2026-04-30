@@ -78,9 +78,21 @@ docs/ato-package/
 │   └── 14-privacy-impact-assessment/
 │
 └── controls/                       The 20 NIST 800-53 Rev 5 control families
+    ├── _master-assessment.csv             ← Master GRC CSV (every Determine If ID across all 20 families)
     ├── AC-access-control/
-    │   ├── ac-implementation.md
-    │   └── evidence/AC-2/, AC-3/, AC-6/ ...
+    │   ├── ac-implementation.md           ← Family narrative; H3 sub-section per Determine If ID
+    │   ├── ac-assessment.csv              ← Per-family GRC CSV
+    │   └── evidence/
+    │       ├── AC-02/                     ← Parent-level evidence files copied here
+    │       │   ├── <files>
+    │       │   ├── AC-02(a)/_relevant-evidence.md   ← Manifest pointing at parent-level files
+    │       │   ├── AC-02(d)/_relevant-evidence.md
+    │       │   ├── AC-02(01)/_relevant-evidence.md
+    │       │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md
+    │       ├── AC-03/                     ← Single Determine If ID — no sub-control nesting
+    │       │   ├── <files>
+    │       │   └── _relevant-evidence.md
+    │       └── ...
     ├── AT-awareness-training/
     ├── AU-audit-accountability/
     ├── CA-assessment-authorization/
@@ -256,6 +268,7 @@ All flags live on `/ato-artifact-collector`. The `ato-vulnerability-scanner` sta
 | Flag | Effect |
 |---|---|
 | `--no-vuln-scan` | Disable the pre-collection vulnerability scan. By default the scan runs every collection (Step 1.5). |
+| `--no-assessment` | Disable the per-Determine-If-ID assessment scaffolding. The orchestrator still emits the family narrative and CSV, but as a 7-column CSV (no `Result`/`Findings` columns) and without H3 sub-sections per Determine If ID. Use when the package consumer doesn't want the assessment scaffolding yet. |
 | `--remediation` | Auto-invoke `ato-remediation-guidance` after Step 8. Without this flag, remediation guidance runs only when the user explicitly asks afterward. |
 | `--poam` | Auto-invoke `ato-poam-generator` after the remediation step. **Implies `--remediation`** (POA&M consumes the remediation output). If passed alone, the orchestrator logs `[INFO] --poam implies --remediation; enabling.` and proceeds with both. |
 
@@ -284,8 +297,16 @@ Step 2    DISCOVER   Scan repo for the 20 artifact categories;
 Step 3    COLLECT    Copy discovered files into docs/ato-package/
 Step 4    GENERATE   Synthesize narrative documents with embedded Mermaid diagrams,
                      [CR-NNN] citations
+Step 4.5  ENUMERATE  Build .staging/sub-control-inventory.json — every Determine If ID
+                     for every in-scope control (sub-letters, enhancements, enhancement-with-sub-letter)
+Step 4.6  SC-ROUTE   Sub-control evidence routing — emit
+                     evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/_relevant-evidence.md manifests
 Step 5    ANALYZE    Deep code analysis for security-relevant patterns
-Step 6    GAP        Identify missing items per sub-item
+Step 6    GAP        Identify missing items per sub-item;
+                     per-family narrative iterates EVERY Determine If ID with H3 sub-sections
+Step 6.7  CSV        Emit per-family <cf>-assessment.csv and _master-assessment.csv
+                     (9-column GRC schema, RFC-4180 quoting; Result/Findings columns
+                      blank in PR-A; populated by the assessment pass in PR-B)
 Step 7    CITATIONS  Merge [CR-NNN] from repo + sibling staging batches
                      (sharepoint / aws / azure / smb / vulnscan) into CODE_REFERENCES.md
 Step 8    INDEX      Produce INDEX.md and CHECKLIST.md
@@ -322,6 +343,58 @@ For `vulnscan`, the link is an in-package anchor (`controls/RA-risk-assessment/e
 | ⚪ GRAY | Inherited (CSP), operational, or otherwise out of scope for this repo |
 
 `ato-remediation-guidance` and `ato-poam-generator` both prioritize RED rows; YELLOW rows feed in only when there's enough context.
+
+### Sub-control evidence layout
+
+Per-control evidence sits inside each control family at sub-control granularity, mirroring the federal assessment-spreadsheet pattern (one row per **Determine If ID**: lettered sub-parts of the control body like `AC-02(a)`–`AC-02(l)`, control enhancements like `AC-02(01)`, and enhancement-with-sub-letter chains like `AC-02(12)(b)`).
+
+```
+controls/AC-access-control/
+├── ac-implementation.md         ← Family narrative; H3 sub-section per Determine If ID
+├── ac-assessment.csv            ← Per-family GRC CSV
+└── evidence/
+    ├── AC-02/                   ← Parent-level: where files physically live
+    │   ├── auth.ts                                         ← copied from repo / sibling
+    │   ├── role-check-middleware.ts
+    │   ├── role-matrix.yaml
+    │   ├── AC-02(a)/_relevant-evidence.md                  ← Manifest: relative paths to parent files
+    │   ├── AC-02(d)/_relevant-evidence.md
+    │   ├── AC-02(01)/_relevant-evidence.md                 ← Enhancement, peer of sub-letters
+    │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md    ← Enhancement-with-sub-letter, nested
+    └── AC-03/                   ← Single Determine If ID — no sub-control nesting
+        ├── AuthFilter.php
+        └── _relevant-evidence.md
+```
+
+Two rules to know:
+
+- **No file duplication within a family.** Files live once at the parent control level (`evidence/AC-02/`). Each per-Determine-If-ID sub-folder carries a `_relevant-evidence.md` manifest pointing back at the parent files by relative path. The package stays compact even when a single file is relevant to many sub-letters.
+- **Skip-redundant-nesting for simple controls.** When a control has exactly one Determine If ID (e.g., `AC-03`), evidence sits directly in `evidence/AC-03/` — no `evidence/AC-03/AC-03/` redundant nest.
+
+The full naming rules and folder semantics are in `agents/base/global-scope/ato-artifact-collector/references/sub-control-enumeration.md`.
+
+### GRC assessment CSVs (`<cf>-assessment.csv` + `_master-assessment.csv`)
+
+Step 6.7 emits one CSV per family at `controls/<CF>-<slug>/<cf>-assessment.csv` and a master CSV at `controls/_master-assessment.csv`. Both are designed for direct ingestion into GRC tools (RSA Archer, ServiceNow GRC, Excel-based POA&M trackers).
+
+**9-column schema** (header row exact):
+
+```
+Family ID,Family,Control ID,Control,Determine If ID,Determine If Statement,Method,Result,Findings
+```
+
+- One row per Determine If ID. Empty rows preserved for un-implemented sub-parts (their Determine If Statement / Method / Result / Findings columns are blank).
+- `Method` is always `Review` for orchestrator-emitted rows.
+- `Result` is `Satisfied` / `NotSatisfied` / blank — **blank in PR-A**. Populated when the assessment pass (PR-B) is installed.
+- `Findings` is the assessor narrative — **blank in PR-A**. Populated in PR-B.
+- RFC 4180 quoting: embedded commas / quotes / newlines are quoted; embedded `"` is doubled to `""`. Newlines inside narrative paragraphs are preserved as literal `\n` inside the quoted field.
+- `\n` line endings (no `\r\n`); UTF-8 without BOM.
+
+The master CSV is the master file most GRC tools want — all 20 families in one read, sorted by Family ID alphabetical → Control ID → Determine If ID.
+
+**`--no-assessment` flag.** When passed, the orchestrator emits a 7-column variant (drops `Result` and `Findings`) and skips the per-Determine-If-ID H3 sub-sections in the family narrative. Use this when you want the implementation-statement scaffolding without the assessment pass.
+
+The full schema spec, sort-order rules, and round-trip validation steps are in `agents/base/global-scope/ato-artifact-collector/references/csv-schema.md`.
 
 ### `REMEDIATION_GUIDANCE.md` shape
 
@@ -496,11 +569,19 @@ poam:
     High: 30
     Moderate: 90
     Low: 180
+
+assessment:
+  enabled: false               # PR-A default; flips to true when PR-B is installed.
+                               # --no-assessment forces false per-run.
+
+csv_export:
+  enabled: true                # GRC assessment CSVs (Step 6.7) — default on.
+  master_file: true            # Master CSV at controls/_master-assessment.csv.
 ```
 
 User-global defaults can be set at `~/.claude/skills/ato-artifact-collector/config.yaml` (a starter copy is bundled with the agent). The merge rule is **shallow per source** — if the repo file declares a `sharepoint:` block, it fully replaces the user file's `sharepoint:` block (no field-by-field overlay).
 
-CLI flags win over config: `--no-vuln-scan` disables the scan even if `vulnerability_scan.enabled: true`. `--poam` enables POA&M generation even if `poam.enabled: false`.
+CLI flags win over config: `--no-vuln-scan` disables the scan even if `vulnerability_scan.enabled: true`. `--poam` enables POA&M generation even if `poam.enabled: false`. `--no-assessment` disables the assessment scaffolding even if `assessment.enabled: true`.
 
 ---
 

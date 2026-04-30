@@ -108,6 +108,20 @@ they can never collide with repo-sourced evidence:
   for per-control evidence (an IAM role definition for AC-2, an NSG
   rule for SC-7, a CloudTrail trail for AU-2, etc.).
 
+**Siblings always write at the base-control level** (e.g.
+`controls/AC-access-control/evidence/AC-02/aws_iam-role.json`). They do
+**not** write into per-Determine-If-ID sub-folders
+(`controls/AC-access-control/evidence/AC-02/AC-02(a)/...`). Sub-control
+routing is the orchestrator's responsibility — Step 4.6 reads each
+sibling's evidence file and emits per-Determine-If-ID
+`_relevant-evidence.md` manifests that reference parent-level files by
+relative path. This keeps siblings simple (no need to classify which
+sub-letter or enhancement an IAM role addresses) and keeps the package
+free of duplicate evidence files. The citation batch's `controls` array
+(see "Citation batch" below) MAY include sub-control IDs like `AC-2(3)`
+when the sibling is confident about the mapping; the orchestrator uses
+those hints when generating manifests, but does not require them.
+
 Source prefixes:
 
 - `sharepoint_*` — SharePoint downloads (almost always SSP-section)

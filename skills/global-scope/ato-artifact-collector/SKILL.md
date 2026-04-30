@@ -19,6 +19,7 @@ Before doing anything else, parse the user's invocation arguments for the follow
 | `--sharepoint` | Enable the SharePoint / M365 source. Skip the SharePoint y/N prompt. Requires ambient `m365` CLI auth and `ato-source-sharepoint` installed. |
 | `--smb` | Enable the SMB / Windows-share source. Skip the SMB y/N prompt. Requires mount helpers and `ato-source-smb` installed. |
 | `--no-vuln-scan` | Disable the pre-collection vulnerability scan. By default the scan runs every collection (between Step 1 and Step 2 of the agent workflow). |
+| `--no-assessment` | Disable the per-Determine-If-ID assessment scaffolding. The orchestrator still emits the `<cf>-implementation.md` family narrative, but skips the per-sub-control H3 sub-sections and emits a 7-column CSV (no `Result`/`Findings` columns) instead of the 9-column GRC default. Use when the package consumer doesn't want assessment scaffolding yet. |
 | `--remediation` | Auto-invoke `ato-remediation-guidance` after Step 8 completes. Without this flag, remediation guidance runs only when the user explicitly asks afterward. |
 | `--poam` | Auto-invoke `ato-poam-generator` after the remediation step. **Implies `--remediation`** (POA&M generation consumes the remediation output). If the user passes `--poam` alone, log `[INFO] --poam implies --remediation; enabling.` and proceed with both. |
 
@@ -28,7 +29,7 @@ Before doing anything else, parse the user's invocation arguments for the follow
 
 `--repo` on its own counts as a source flag — it triggers the same skip-interview behavior, with all four external sources disabled.
 
-`--no-vuln-scan`, `--remediation`, and `--poam` are output-control flags (they don't affect source selection). They can combine with the interview path or the flag path freely.
+`--no-vuln-scan`, `--no-assessment`, `--remediation`, and `--poam` are output-control flags (they don't affect source selection). They can combine with the interview path or the flag path freely.
 
 ### Examples
 
@@ -40,6 +41,7 @@ Before doing anything else, parse the user's invocation arguments for the follow
 | `--repo --no-vuln-scan` | Skip interview, repo only, no vuln scan, no remediation, no POAM |
 | `--repo --remediation` | Skip interview, repo only, vuln scan on, auto-remediation, no POAM |
 | `--repo --poam` | Skip interview, repo only, vuln scan on, auto-remediation (implied), POA&M generated |
+| `--repo --no-assessment` | Skip interview, repo only, no per-sub-control assessment scaffolding (smaller CSV without Result/Findings columns) |
 | `--aws --azure --sharepoint --smb --remediation --poam` | Full external collection + auto-remediation + POAM (no interview) |
 
 ## Step 1 — Confirm scope with the user (only when no source flags were passed)
@@ -64,6 +66,7 @@ Invoke the `Agent` tool with `subagent_type: "ato-artifact-collector"`. Pass:
 - The repo's working directory.
 - The output-control flags resolved in Step 0:
   - `vuln_scan.enabled: true | false` (true unless `--no-vuln-scan` was passed or config disables it)
+  - `assessment.enabled: true | false` (config default unless `--no-assessment` was passed; in PR-A the config default is `false`)
   - `auto_remediation: true | false` (true if `--remediation` or `--poam` was passed)
   - `auto_poam: true | false` (true if `--poam` was passed)
 - Any user notes (target ATO version, deadline, gap tolerance).

@@ -8,3 +8,9 @@
 # Editor / interpreter cruft
 .Rhistory
 .DS_Store
+
+# Office lock files
+~$*
+
+# Reference assessment spreadsheets (input data, not deliverable)
+*.xlsx
