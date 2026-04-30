@@ -24,7 +24,7 @@ Expected shape when logged in:
 
 If `connectedAs` is null, write `auth_missing` error and exit.
 
-## Site and list discovery
+## Site and library discovery
 
 ```bash
 # List all sites the user can see (only used when scope says "all sites")
@@ -33,17 +33,48 @@ m365 spo site list --output json
 # Get site details
 m365 spo site get --url "https://contoso.sharepoint.com/sites/ato" --output json
 
-# List document libraries on a site
+# List ALL lists on a site (libraries + custom lists). For ATO scoping,
+# filter the JSON output to BaseTemplate == 101 (document libraries).
 m365 spo list list --webUrl "https://contoso.sharepoint.com/sites/ato" --output json
 ```
+
+### Resolve library name → URL path
+
+The user-facing library name (`Documents`, `ATO Evidence`, `Compliance`) is not always the same as the URL path SharePoint stores it under. Common cases:
+
+| Library name | URL path (`RootFolder.ServerRelativeUrl`) |
+|---|---|
+| `Documents` (the default library every site has) | `/sites/<site>/Shared Documents` |
+| `ATO Evidence` (org-created) | `/sites/<site>/ATO Evidence` *or* `/sites/<site>/ATOEvidence` (depends on whether the URL was renamed at create time) |
+| `Compliance` (org-created) | `/sites/<site>/Compliance` |
+
+The skill resolves library names by parsing the `m365 spo list list` output:
+
+```bash
+# The skill uses jq (or yq) to filter to document libraries (BaseTemplate=101)
+# and extract the user-facing Title plus the URL-path root.
+m365 spo list list --webUrl <site> --output json \
+  | jq '[.[] | select(.BaseTemplate==101) | {name: .Title, root: .RootFolder.ServerRelativeUrl}]'
+```
+
+For each configured library name (from the scope object's `libraries[site]` array), find the matching `name` in the parsed output and use its `root` as the `--folder` argument to subsequent `m365 spo file list` calls. If a configured library isn't found in the inventory, log to `partial_failures` with reason `library_not_found` and continue with the remaining libraries.
 
 ## File discovery
 
 ```bash
-# List files in a folder (recursive via --recursive)
+# List files in a library (recursive via --recursive). The --folder value is
+# the library's RootFolder.ServerRelativeUrl resolved in the previous step,
+# joined with any user-specified sub-folder.
 m365 spo file list \
   --webUrl "https://contoso.sharepoint.com/sites/ato" \
-  --folder "/Shared Documents/Current ATO" \
+  --folder "/sites/ato/Shared Documents/Current ATO" \
+  --recursive \
+  --output json
+
+# Same call against a non-default library (e.g., the org-created 'ATO Evidence' library)
+m365 spo file list \
+  --webUrl "https://contoso.sharepoint.com/sites/ato" \
+  --folder "/sites/ato/ATO Evidence" \
   --recursive \
   --output json
 

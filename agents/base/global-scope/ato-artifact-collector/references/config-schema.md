@@ -37,10 +37,37 @@ sharepoint:
   sites:                                      # List of SharePoint site URLs.
     - https://contoso.sharepoint.com/sites/ato
     - https://contoso.sharepoint.com/sites/security-policies
-  folders:                                    # Optional per-site folder scope.
+  libraries:                                  # REQUIRED: explicit document libraries per site.
+                                              # Sites can have multiple libraries (default
+                                              # 'Documents' plus org-created ones like
+                                              # 'ATO Evidence', 'Compliance', 'Site Assets').
+                                              # Listing only the default library silently
+                                              # misses evidence stored elsewhere — the kind
+                                              # of failure that's invisible until an assessor
+                                              # asks for a doc the package doesn't have.
+                                              # If the user doesn't know the library names,
+                                              # they can answer `list` interactively and the
+                                              # orchestrator will fetch them via
+                                              # `m365 spo list list` (filter BaseTemplate=101).
     https://contoso.sharepoint.com/sites/ato:
-      - /Shared Documents/Current ATO
-      - /Shared Documents/POA&M
+      - Documents
+      - ATO Evidence
+      - Compliance
+    https://contoso.sharepoint.com/sites/security-policies:
+      - Documents
+  folders:                                    # OPTIONAL: per-(site, library) folder filter.
+                                              # When omitted for a (site, library) pair, the
+                                              # entire library is scanned recursively.
+                                              # Folder paths are relative to the library root
+                                              # (e.g., 'Current ATO' under 'Documents' library
+                                              # resolves to /sites/ato/Shared Documents/Current ATO).
+    https://contoso.sharepoint.com/sites/ato:
+      Documents:
+        - /Current ATO
+        - /POA&M
+      ATO Evidence:
+        - /2026 Q1
+      # 'Compliance' library has no folder filter — scan the whole library.
   file_types:                                 # Optional: restrict extensions.
     - .docx
     - .pdf
@@ -246,11 +273,17 @@ sharepoint:
   tenant: contoso
   sites:
     - https://contoso.sharepoint.com/sites/app-ato
+  libraries:
+    https://contoso.sharepoint.com/sites/app-ato:
+      - Documents
+      - ATO Evidence
   folders:
     https://contoso.sharepoint.com/sites/app-ato:
-      - /Shared Documents/SSP
-      - /Shared Documents/POA&M
-      - /Shared Documents/Policies
+      Documents:
+        - /SSP
+        - /POA&M
+        - /Policies
+      # 'ATO Evidence' library: no folder filter — scan the whole library
 
 aws:
   enabled: true
@@ -393,6 +426,13 @@ The orchestrator rejects a config that:
   semgrep, osv-scanner)
 - Sets `poam.severity_to_due_date` with a non-positive integer or a missing
   key from the canonical set {Critical, High, Moderate, Low}
+- Has `sharepoint.enabled: true` but is missing `sharepoint.libraries`, OR has
+  `sharepoint.libraries` keyed by a site URL not in `sharepoint.sites`, OR has
+  `sharepoint.folders[site][library]` referring to a library not in
+  `sharepoint.libraries[site]`. (Legacy `folders`-only configs with no
+  `libraries` field are accepted with a deprecation warning — the SharePoint
+  sibling defaults `libraries` to `["Documents"]` per site in legacy mode and
+  treats each legacy folder string as `Documents/<path>`.)
 
 On validation failure, the skill prints the offending field path and refuses
 to proceed. The user fixes the config and re-runs.

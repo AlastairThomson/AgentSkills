@@ -56,6 +56,24 @@ Otherwise, establish which external sources the user wants to scan:
 
 Ask the user which apply. If an `.ato-package.yaml` exists at the repo root, read it and confirm the settings with the user rather than re-asking from scratch.
 
+### SharePoint-specific scope prompts
+
+When SharePoint is enabled (via flag or interactive answer), the scope object MUST include explicit document libraries to scan. SharePoint sites contain one or more libraries (default name `Documents`, plus any others the org has created — `ATO Evidence`, `Compliance`, `Site Assets`, etc.). Scanning only the default library silently misses evidence in non-default libraries — the kind of failure that's invisible until an assessor asks for a document and the package doesn't have it.
+
+Required prompts when `.ato-package.yaml` is missing or has no `libraries:` block:
+
+1. **Tenant** — `Which {tenant}.sharepoint.com tenant? (just the {tenant} label, no scheme)`
+2. **Site URL(s)** — `Which SharePoint site(s) hold the ATO evidence? (full URLs, comma-separated)`
+3. **Library names per site** — for each site: `Which document library or libraries should be scanned? (comma-separated names — e.g., 'Documents, ATO Evidence, Compliance'; type 'list' to fetch the site's libraries first)`
+   - If the user types `list`, run `m365 spo list list --webUrl <site> --output json`, filter to `BaseTemplate == 101`, present the names, and re-prompt.
+4. **Optional folder filter per library** — `Restrict to specific folders within <library>? (comma-separated folder paths, or leave blank to scan the entire library)`
+
+The scope object the orchestrator passes to the SharePoint sibling is the new shape (sites + libraries + folders[site][library]); the sibling rejects with `scope_invalid` if libraries are missing.
+
+### Working repo's license / visibility is irrelevant to scope
+
+When SharePoint (or any other external source) is configured, **never** decide whether to skip it based on the working repo's license, visibility, owner, or open-source status. Federal agencies (CMS, NASA, NIH, GSA, USDA) actively operate open-source code that needs ATO; their internal SharePoint typically holds the SSP, IRP, CMP, POA&M, and authorization letters that the package must include. The user's explicit scope wins over any inference about what kind of repo this is.
+
 ## Step 2 — Launch the agent
 
 Invoke the `Agent` tool with `subagent_type: "ato-artifact-collector"`. Pass:
