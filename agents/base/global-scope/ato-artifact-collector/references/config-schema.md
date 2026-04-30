@@ -164,16 +164,45 @@ poam:                                         # POA&M generator behavior (post-S
     Moderate: 90
     Low: 180
 
-assessment:                                   # Per-Determine-If-ID assessment scaffolding
-                                              # (sub-control narrative iteration + GRC CSV).
-  enabled: false                              # PR-A default: false. The orchestrator emits
-                                              # the per-Determine-If-ID narrative scaffolding
-                                              # but leaves Result + Findings columns blank.
-                                              # Set true once PR-B (assessment pass +
-                                              # synthesized drafts) is installed; the CLI
-                                              # flag `--no-assessment` forces this to false.
-                                              # See `references/sub-control-enumeration.md`
-                                              # for the inventory schema.
+assessment:                                   # Per-Determine-If-ID assessment pass
+                                              # (Step 6.5: generate Findings + Result for
+                                              # every Determine If ID).
+  enabled: true                               # PR-B default: true. The orchestrator
+                                              # populates Findings + Result for every
+                                              # Determine If ID per the AMIS-style
+                                              # assessment template. The CLI flag
+                                              # `--no-assessment` forces this to false
+                                              # per-run; when false, the orchestrator
+                                              # still emits the H3 scaffolding and the
+                                              # Determine If Statement but skips
+                                              # Findings/Result and emits a 7-column CSV
+                                              # without the Result/Findings columns.
+                                              # See `references/assessment-template.md`.
+
+synthesis:                                    # Gap-driven artifact synthesis
+                                              # (Step 6.6: draft missing artifacts for
+                                              # "implementation present, artifact missing"
+                                              # gaps).
+  enabled: true                               # Default true. Drafts land under
+                                              # `synthesized/` with a DRAFT banner. The
+                                              # CLI flag `--no-synthesize` forces this
+                                              # to false per-run. When false, gaps are
+                                              # named textually in Findings paragraphs
+                                              # but no draft files are written.
+                                              # Synthesis is automatically skipped when
+                                              # `assessment.enabled` is false.
+  auto_accept: false                          # Default false (drafts stay under
+                                              # `synthesized/` for human review). The
+                                              # CLI flag `--accept-synthesized` forces
+                                              # this to true per-run; auto-promoted
+                                              # artifacts are loudly signaled (end-of-run
+                                              # summary, INDEX.md banner, CHECKLIST notes
+                                              # column). See `references/synthesis-patterns.md`.
+                                              # Risk: synthesized drafts make assertions
+                                              # about the system from code inspection
+                                              # alone; org policy may disagree. The flag
+                                              # exists for fast iteration; loud signaling
+                                              # is the safeguard.
 
 csv_export:                                   # GRC assessment CSV emission (Step 6.7).
   enabled: true                               # Default true. When false, no
@@ -415,6 +444,8 @@ The orchestrator rejects a config that:
 - Sets `poam.severity_to_due_date` with a non-positive integer or a missing
   key from the canonical set {Critical, High, Moderate, Low}
 - Sets `assessment.enabled` to a value other than `true` or `false`
+- Sets `synthesis.enabled` to a value other than `true` or `false`
+- Sets `synthesis.auto_accept` to a value other than `true` or `false`
 - Sets `csv_export.enabled` to a value other than `true` or `false`
 - Sets `csv_export.master_file` to a value other than `true` or `false`
 

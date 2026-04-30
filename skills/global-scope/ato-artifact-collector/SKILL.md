@@ -19,7 +19,9 @@ Before doing anything else, parse the user's invocation arguments for the follow
 | `--sharepoint` | Enable the SharePoint / M365 source. Skip the SharePoint y/N prompt. Requires ambient `m365` CLI auth and `ato-source-sharepoint` installed. |
 | `--smb` | Enable the SMB / Windows-share source. Skip the SMB y/N prompt. Requires mount helpers and `ato-source-smb` installed. |
 | `--no-vuln-scan` | Disable the pre-collection vulnerability scan. By default the scan runs every collection (between Step 1 and Step 2 of the agent workflow). |
-| `--no-assessment` | Disable the per-Determine-If-ID assessment scaffolding. The orchestrator still emits the `<cf>-implementation.md` family narrative, but skips the per-sub-control H3 sub-sections and emits a 7-column CSV (no `Result`/`Findings` columns) instead of the 9-column GRC default. Use when the package consumer doesn't want assessment scaffolding yet. |
+| `--no-assessment` | Disable the per-Determine-If-ID assessment pass (Step 6.5) AND synthesis (Step 6.6). The orchestrator still emits the `<cf>-implementation.md` family narrative with H3 sub-sections + Determine If Statement, but skips Findings/Result and emits a 7-column CSV (no `Result`/`Findings` columns) instead of the 9-column GRC default. |
+| `--no-synthesize` | Disable gap-driven artifact synthesis (Step 6.6) only. Findings + Result are still produced (assessment runs); gaps are named textually but no drafts are written and no `SYNTHESIZED_ARTIFACTS.md` inventory is produced. |
+| `--accept-synthesized` | Auto-promote each synthesized draft from `synthesized/<artifact>.md` to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact>.md` (one folder up); flip Result to Satisfied for that Determine If ID; emit loud signaling (end-of-run summary block, `INDEX.md` banner, `CHECKLIST.md` notes column). The original drafts stay under `synthesized/` for audit. **Risky** — synthesized drafts make assertions about the system from code inspection alone, and may disagree with org policy. The loud signaling is the safeguard; review every promoted artifact before authoritative submission. |
 | `--remediation` | Auto-invoke `ato-remediation-guidance` after Step 8 completes. Without this flag, remediation guidance runs only when the user explicitly asks afterward. |
 | `--poam` | Auto-invoke `ato-poam-generator` after the remediation step. **Implies `--remediation`** (POA&M generation consumes the remediation output). If the user passes `--poam` alone, log `[INFO] --poam implies --remediation; enabling.` and proceed with both. |
 
@@ -29,7 +31,7 @@ Before doing anything else, parse the user's invocation arguments for the follow
 
 `--repo` on its own counts as a source flag — it triggers the same skip-interview behavior, with all four external sources disabled.
 
-`--no-vuln-scan`, `--no-assessment`, `--remediation`, and `--poam` are output-control flags (they don't affect source selection). They can combine with the interview path or the flag path freely.
+`--no-vuln-scan`, `--no-assessment`, `--no-synthesize`, `--accept-synthesized`, `--remediation`, and `--poam` are output-control flags (they don't affect source selection). They can combine with the interview path or the flag path freely. `--no-assessment` implies `--no-synthesize` (synthesis depends on Findings).
 
 ### Examples
 
@@ -42,6 +44,8 @@ Before doing anything else, parse the user's invocation arguments for the follow
 | `--repo --remediation` | Skip interview, repo only, vuln scan on, auto-remediation, no POAM |
 | `--repo --poam` | Skip interview, repo only, vuln scan on, auto-remediation (implied), POA&M generated |
 | `--repo --no-assessment` | Skip interview, repo only, no per-sub-control assessment scaffolding (smaller CSV without Result/Findings columns) |
+| `--repo --no-synthesize` | Skip interview, repo only, assessment runs but no synthesized drafts written |
+| `--repo --accept-synthesized` | Skip interview, repo only, synthesis on, drafts auto-promoted to evidence (loud signaling) |
 | `--aws --azure --sharepoint --smb --remediation --poam` | Full external collection + auto-remediation + POAM (no interview) |
 
 ## Step 1 — Confirm scope with the user (only when no source flags were passed)
@@ -66,7 +70,9 @@ Invoke the `Agent` tool with `subagent_type: "ato-artifact-collector"`. Pass:
 - The repo's working directory.
 - The output-control flags resolved in Step 0:
   - `vuln_scan.enabled: true | false` (true unless `--no-vuln-scan` was passed or config disables it)
-  - `assessment.enabled: true | false` (config default unless `--no-assessment` was passed; in PR-A the config default is `false`)
+  - `assessment.enabled: true | false` (config default unless `--no-assessment` was passed; default config is `true`)
+  - `synthesis.enabled: true | false` (config default unless `--no-synthesize` was passed; default config is `true`; auto-disabled when `assessment.enabled: false`)
+  - `synthesis.auto_accept: true | false` (true if `--accept-synthesized` was passed; default config is `false`)
   - `auto_remediation: true | false` (true if `--remediation` or `--poam` was passed)
   - `auto_poam: true | false` (true if `--poam` was passed)
 - Any user notes (target ATO version, deadline, gap tolerance).
