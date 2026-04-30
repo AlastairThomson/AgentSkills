@@ -74,12 +74,23 @@ poam:
     Moderate: 90
     Low: 180
 
-# Per-Determine-If-ID assessment scaffolding. PR-A defaults to false — the
-# orchestrator scaffolds the per-sub-control narrative structure but leaves
-# Result + Findings columns blank. PR-B (assessment pass + synthesized drafts)
-# flips this to true. The CLI flag --no-assessment forces false.
+# Per-Determine-If-ID assessment pass. Default-on — the orchestrator generates
+# Findings + Result (Satisfied / NotSatisfied / blank) for every Determine If ID.
+# The CLI flag --no-assessment forces false per-run; when false, the orchestrator
+# still emits the H3 scaffolding and the Determine If Statement but skips
+# Findings/Result and emits a 7-column CSV without those columns.
 assessment:
-  enabled: false
+  enabled: true
+
+# Gap-driven artifact synthesis. Default-on — drafts for "implementation present,
+# artifact missing" gaps land under synthesized/ with a DRAFT banner. The CLI
+# flag --no-synthesize disables. auto_accept defaults to false (drafts stay
+# under synthesized/ for human review); the CLI flag --accept-synthesized
+# auto-promotes drafts and emits loud signaling. Synthesis is automatically
+# skipped when assessment.enabled is false.
+synthesis:
+  enabled: true
+  auto_accept: false
 
 # GRC assessment CSV emission (Step 6.7). Default-on — every run emits
 # per-family <cf>-assessment.csv plus a master controls/_master-assessment.csv

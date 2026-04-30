@@ -12,6 +12,8 @@ that maps everything to the artifact guide and a CHECKLIST.md with per-item stat
 - `references/artifact-mappings.md` — file-pattern → artifact-family mapping table.
 - `references/sub-control-enumeration.md` — Step 4.5 reference: how to build the `.staging/sub-control-inventory.json` and the sub-control naming rules.
 - `references/csv-schema.md` — Step 6.7 reference: the per-family `<cf>-assessment.csv` and master `_master-assessment.csv` schema and RFC-4180 quoting rules.
+- `references/assessment-template.md` — Step 6.5 reference: Findings paragraph template, Satisfied/NotSatisfied decision rules, AMIS-row examples.
+- `references/synthesis-patterns.md` — Step 6.6 reference: gap-detection heuristic, synthesized-draft templates, `--accept-synthesized` semantics.
 - `config.yaml` — default config. Users override via `.ato-package.yaml` at their repo root.
 
 Read the relevant reference at each step. Do not try to load them all upfront.
@@ -61,9 +63,20 @@ defines what artifacts are needed. If it doesn't exist, use the reference copy a
 5.    ANALYZE      → Deep code analysis for security-relevant patterns
 6.    GAP          → Identify what's missing per sub-item;
                      per-family narrative iterates EVERY Determine If ID with H3 sub-sections
-                     (Method/Determine If Statement; placeholder Result/Findings — populated by PR-B)
+                     (Method/Determine If Statement)
+6.5.  ASSESS       → Assessment pass — for each Determine If ID, generate Findings paragraph
+                     and set Result (Satisfied / NotSatisfied / blank) per
+                     references/assessment-template.md. (Skipped when --no-assessment.)
+6.6.  SYNTHESIZE   → For each NotSatisfied row where the gap is "implementation present,
+                     artifact missing", generate a draft document under synthesized/.
+                     Write SYNTHESIZED_ARTIFACTS.md inventory at package root.
+                     If --accept-synthesized, auto-promote drafts up one folder, flip
+                     Result to Satisfied, and emit loud signaling (end-of-run summary,
+                     INDEX.md banner, CHECKLIST notes column).
+                     (Skipped when --no-synthesize or --no-assessment.)
 6.7.  CSV          → Emit per-family <cf>-assessment.csv and _master-assessment.csv
-                     (9-column GRC schema, RFC-4180 quoting; Result/Findings columns blank in PR-A)
+                     (9-column GRC schema, RFC-4180 quoting; Result/Findings populated
+                      after Step 6.5)
 7.    CITATIONS    → Merge [CR-NNN] citations (repo + sibling staging batches, including
                      vulnscan-citations.json) into CODE_REFERENCES.md with a Source column
                      and per-source link format
@@ -377,9 +390,10 @@ file into both. Each top-level folder must be self-contained.
 
 ```
 docs/ato-package/
-├── INDEX.md                                    ← Master map
+├── INDEX.md                                    ← Master map (gains auto-promote banner when --accept-synthesized)
 ├── CHECKLIST.md                                ← Per-item status
 ├── CODE_REFERENCES.md                          ← All [CR-NNN] resolved
+├── SYNTHESIZED_ARTIFACTS.md                    ← Inventory of synthesized drafts (Step 6.6)
 ├── REMEDIATION_GUIDANCE.md                     ← Optional, only when ato-remediation-guidance is run
 │
 ├── ssp-sections/
@@ -414,7 +428,10 @@ docs/ato-package/
     │       ├── AC-02/
     │       │   ├── <parent-level files>        ← Files physically copied here
     │       │   ├── AC-02(a)/_relevant-evidence.md   ← Step 4.6 manifest
-    │       │   ├── AC-02(d)/_relevant-evidence.md
+    │       │   ├── AC-02(d)/
+    │       │   │   ├── _relevant-evidence.md
+    │       │   │   └── synthesized/                ← Step 6.6: drafts for missing artifacts
+    │       │   │       └── role-matrix-draft.md    ← DRAFT (or auto-promoted up one level)
     │       │   ├── AC-02(01)/_relevant-evidence.md
     │       │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md
     │       ├── AC-03/                          ← Single Determine If ID — no nesting
@@ -642,6 +659,12 @@ Two reserved filenames produced by Step 6.7 (GRC assessment CSV emission):
 | `controls/<CF>-<slug>/` | `<cf>-assessment.csv` | Step 6.7 | One CSV per family. 9 columns (Family ID, Family, Control ID, Control, Determine If ID, Determine If Statement, Method, Result, Findings). One row per Determine If ID. RFC-4180 quoting. See `references/csv-schema.md`. |
 | `controls/` (root) | `_master-assessment.csv` | Step 6.7 | All 20 family CSVs concatenated, single header. Sort: Family ID alphabetical → Control ID → Determine If ID. Designed for direct ingestion into GRC tools. |
 
+One reserved filename produced by Step 6.6 (gap-driven artifact synthesis):
+
+| Where it lives | Filename | Producer | Notes |
+|---|---|---|---|
+| `docs/ato-package/` (root) | `SYNTHESIZED_ARTIFACTS.md` | Step 6.6 | Inventory of every draft artifact generated for "implementation present, artifact missing" gaps. Each row links to a draft under `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/`. When `--accept-synthesized` is set, rows for auto-promoted drafts carry status `ACCEPTED (auto, <timestamp>)`. See `references/synthesis-patterns.md`. |
+
 #### Control families (20)
 
 All 20 NIST 800-53 Rev 5 families always appear, even when a family is
@@ -766,7 +789,7 @@ middleware enforces least privilege per **AC-6(1)** by …"]
 
 The narrative iterates **every Determine If ID** in the sub-control inventory at H3 granularity. Sub-letters of the control body (`AC-02(a)` … `AC-02(l)`), enhancements (`AC-02(01)`), and enhancement-with-sub-letter chains (`AC-02(12)(b)`) each get their own H3 sub-section. The H2 holds the family-level rollup; the H3 carries the per-Determine-If-ID assessment row's worth of content.
 
-In **PR-A**, every H3 sub-section emits Method + Determine If Statement plus **placeholder** Result and Findings blocks. The assessment pass (PR-B, Step 6.5) populates Result/Findings.
+Step 6 emits the **Determine If Statement** paragraph and the H3 scaffolding (Method, Evidence, blockquote header). Step 6.5 (the assessment pass) fills in **Result** and **Findings**. Step 6.6 may append a "draft generated" sentence to Findings if it produced one.
 
 ```markdown
 # [Family name] — Implementation Statement
@@ -790,44 +813,44 @@ In **PR-A**, every H3 sub-section emits Method + Determine If Statement plus **p
 
 > **Status (rolled up)**: YELLOW
 > **Evidence root**: `evidence/AC-02/`
-> **Determine If items**: 12 (n Satisfied, n NotSatisfied, n blank — populated in PR-B)
+> **Determine If items**: 12 (10 Satisfied, 2 NotSatisfied)
 
 ### AC-02(a) — Define account types
 
 > **Method**: Review
-> **Result**: _Pending assessment pass — see PR-B_
+> **Result**: Satisfied
 > **Evidence**: `evidence/AC-02/AC-02(a)/_relevant-evidence.md`
 
-**Determine If Statement.** [Implementation narrative drawn from collected evidence and the Step 4 generated content. Cites `[CR-NNN]` IDs inline. This is the paragraph the GRC CSV's `Determine If Statement` column ingests.]
+**Determine If Statement.** AMIS defines and documents two allowed account types within the system: individual user accounts mapped from NIH NED IDs to AMIS identities with the roles `ADMINISTRATOR`, `DATA_ENTERER`, `VIEWER`, `INVESTIGATOR` [CR-042], and an application or service principal account for the Function App.
 
-**Findings.** _Pending assessment pass — see PR-B._
+**Findings.** The evidence directly supports that AMIS defines allowed individual user accounts mapped from NIH NED IDs and an application or service principal account for the Function App, and the implementation statement names the four application roles. The evidence covers the entire requirement, including the type definitions for both account categories. The requirement is satisfied.
 
 ### AC-02(d) — Specify account attributes
 
 > **Method**: Review
-> **Result**: _Pending assessment pass — see PR-B_
+> **Result**: NotSatisfied
 > **Evidence**: `evidence/AC-02/AC-02(d)/_relevant-evidence.md`
 
-**Determine If Statement.** [Implementation narrative for the part(s) of the requirement that have evidence. Cite `[CR-NNN]`. If the system implements role enforcement but no role-classification artifact, the narrative says so honestly: "AMIS authorizes only NIH-Login-authenticated users whose NED IDs have been pre-provisioned... [CR-042][CR-043]. The four application roles (`ADMINISTRATOR`, `DATA_ENTERER`, `VIEWER`, `INVESTIGATOR`) are defined in code but no artifact maps these roles onto the Privileged / Non-Privileged / No-Logical-Access categories the requirement names."]
+**Determine If Statement.** AMIS authorizes only NIH-Login-SAML-authenticated users whose NED IDs have been manually pre-provisioned by an AMIS administrator in the application's internal user table [CR-042]. The system defines four application role memberships (`ADMINISTRATOR`, `DATA_ENTERER`, `VIEWER`, `INVESTIGATOR`) and enforces access authorizations on each request through the middleware sequence `withErrorHandler → withCsrf → withAuth → checkRole/checkAreaPermission → handler`, where `checkAreaPermission(areaId, action)` applies fine-grained read, write, and delete permissions by user and area, bypassed only for the `ADMINISTRATOR` role [CR-043][CR-044].
 
-**Findings.** _Pending assessment pass — see PR-B._
+**Findings.** The evidence and implementation statement support several portions of the requirement by identifying authorized users as NIH-Login-authenticated users who are manually pre-provisioned in the AMIS user table, naming four application roles, and describing role-based and area-based access enforcement. However, the determine if statement also requires specification of the user role matrix attributes for each account type — specifically whether users are Internal or External and whether each account type is Privileged, Non-Privileged, or No Logical Access — and the provided evidence does not explicitly map the identified user roles or account types to those required attributes. The requirement is not fully satisfied. A draft artifact has been generated at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/role-matrix-draft.md` for review.
 
 ### AC-02(01) — Automated System Account Management
 
 > **Method**: Review
-> **Result**: _Pending assessment pass — see PR-B_
+> **Result**: NotSatisfied
 > **Evidence**: `evidence/AC-02/AC-02(01)/_relevant-evidence.md`
 
-**Determine If Statement.** [Narrative.]
+**Determine If Statement.** AMIS supports account management by validating user authentication through the SAML callback handler and checking the AMIS user table with `findUserByNedId` each time a NED-authenticated user attempts to access the system [CR-058]. Account creation, role assignment, and disablement are performed manually by an AMIS administrator through the internal user table; no automated provisioning, recertification, or de-provisioning workflow has been detected.
 
-**Findings.** _Pending assessment pass — see PR-B._
+**Findings.** The evidence explicitly states that no automated account management workflow is detected in the repository and that account creation appears to be a manual pre-step performed by an AMIS administrator. The determine if statement requires support for management of system accounts using organization-defined automated mechanisms. Manual administrator-driven provisioning does not satisfy the automation requirement. The requirement is not fully satisfied.
 
 [... one H3 sub-section per Determine If ID actually in scope for the system's
 baseline. The inventory drives this — every entry in the inventory's
 `determine_if_ids` arrays gets one H3, even when the system has no
-implementation for it (in which case the Determine If Statement paragraph
-is "_No implementation found in repo or external sources._" and Result will
-be `NotSatisfied` after PR-B).]
+implementation for it. Un-implementable rows (e.g., AC-02(c) requiring
+"organization-defined prerequisites and criteria") emit a Findings paragraph
+that names the requirement as un-derivable from the repo with Result blank.]
 
 ## AC-03 — Access Enforcement
 
@@ -838,17 +861,17 @@ be `NotSatisfied` after PR-B).]
 ### AC-03 — Access Enforcement
 
 > **Method**: Review
-> **Result**: _Pending assessment pass — see PR-B_
+> **Result**: Satisfied
 > **Evidence**: `evidence/AC-03/_relevant-evidence.md`
 
-**Determine If Statement.** [Narrative.]
+**Determine If Statement.** The system enforces approved logical access authorizations by requiring authentication and authorization for all application requests except `/api/health` and the SAML endpoints [CR-061]. For each request, the middleware chain validates the JWT, looks up the user record, and applies role-based and area-based authorization checks before the handler runs.
 
-**Findings.** _Pending assessment pass — see PR-B._
+**Findings.** The evidence directly supports that the system enforces approved logical access authorizations by requiring authentication and authorization for all application requests except `/api/health` and the SAML endpoints. The middleware chain implements role-based and area-based authorization. The evidence covers the entire requirement. The requirement is satisfied.
 ```
 
-**Why every Determine If ID gets a section even when no implementation exists.** The CSV consumer (GRC tool, federal reviewer) needs the full enumeration. A Determine If ID that's silently absent from the narrative looks like an authoring oversight, not a deliberate gap. Emitting an H3 with an explicit "no implementation found" Determine If Statement makes the gap legible.
+**Why every Determine If ID gets a section even when no implementation exists.** The CSV consumer (GRC tool, federal reviewer) needs the full enumeration. A Determine If ID that's silently absent from the narrative looks like an authoring oversight, not a deliberate gap. Emitting an H3 with an explicit "no implementation found" Determine If Statement and a Findings paragraph naming the un-assessable nature of the row makes the gap legible.
 
-**Why placeholder Result/Findings in PR-A.** The assessment pass (PR-B) is a separate read of the narrative-against-requirement. PR-A scaffolds the structure so PR-B has somewhere to write; the placeholder is honest about where the work splits.
+**Findings + Result are populated by Step 6.5.** The assessment pass reads the requirement text from the inventory, compares it against the Determine If Statement, and writes the Findings paragraph + Result. Result decision rules and a worked-example bank live in `references/assessment-template.md`. When `--no-assessment` is set, the H3 sub-sections still emit but Findings/Result are omitted (the per-family narrative shows only Method + Determine If Statement).
 
 **Control-ID style.** Use the canonical NIST 800-53 Rev 5 dotted form:
 family code (`AC`), base control (`AC-2`), control enhancement
@@ -1253,6 +1276,135 @@ Categorize each gap:
   obtain it.
 - **INHERITED**: The artifact is likely inherited from a cloud service provider (CSP)
   or shared service. Note which provider and suggest checking their FedRAMP package.
+
+## Step 6.5: Assessment pass
+
+The per-family narrative emerging from Step 6 has the **Determine If Statement** filled in for every Determine If ID, but the **Findings** and **Result** blocks are placeholders (PR-A scaffolds them). Step 6.5 fills them in.
+
+**Gate.** Skip this step if the scope object's `assessment.enabled` is `false` (set by `--no-assessment` or by config). Skipping this step also skips Step 6.6 (synthesis depends on Findings).
+
+**Inputs per Determine If ID:**
+
+1. The `text` field from `.staging/sub-control-inventory.json` — the requirement language.
+2. The `**Determine If Statement.**` paragraph in the per-family narrative — the implementation narrative just emitted in Step 6.
+3. The `_relevant-evidence.md` manifest emitted in Step 4.6.
+
+**Output.** Replace the placeholders in the per-family narrative:
+
+- `> **Result**: _Pending assessment pass — see PR-B_` → `> **Result**: Satisfied | NotSatisfied | _(blank, with explanation)_`
+- `**Findings.** _Pending assessment pass — see PR-B._` → the actual Findings paragraph (3 sentences, sometimes 4).
+
+**Findings paragraph shape** (full template + worked examples in `references/assessment-template.md`):
+
+1. Positive evidence claim. "The evidence directly supports that [X]."
+2. Either sufficiency ("The evidence covers the entire requirement, including [Y].") or gap ("However, the determine if statement also requires [Z], which the evidence does not [explicitly map | document | specify | demonstrate].").
+3. Conclusion. One of "The requirement is satisfied." / "The requirement is not fully satisfied." / "The requirement cannot be assessed without [...]"
+4. (Optional, added by Step 6.6 when a draft is generated for this row) "A draft artifact has been generated at `<path>` for review."
+
+**Result decision rules:**
+
+| Findings concludes... | Result |
+|---|---|
+| "The requirement is satisfied." | `Satisfied` |
+| "The requirement is not fully satisfied." | `NotSatisfied` |
+| "The requirement cannot be assessed without [...]" | _blank_ |
+| Determine If Statement was empty (no implementation narrative) | _blank_ — emit Findings explaining un-assessability |
+
+**Hard rule.** The orchestrator MUST NOT mark a row `Satisfied` if the Findings paragraph contains gap language ("does not", "no document", "lacks", "missing", "is not specified", "cannot be assessed", "not [explicitly] mapped"). If the Findings paragraph names a gap, the Result is `NotSatisfied` (or blank). This is enforced by a hygiene check after generation; halt with a clear error if violated.
+
+**No new citations.** Step 6.5 does not introduce new `[CR-NNN]` IDs. The Findings paragraph references citations that already exist in the Determine If Statement.
+
+**No editorialising.** Findings stay scoped to the specific Determine If ID's requirement language. Do not opine on the system overall.
+
+After Step 6.5 completes, the per-family narrative has full Findings + Result for every Determine If ID. Proceed to Step 6.6.
+
+## Step 6.6: Synthesize draft artifacts
+
+For every Determine If ID where Step 6.5 set `Result: NotSatisfied`, decide whether to generate a draft artifact.
+
+**Gate.** Skip this step if either of these is true:
+
+- The scope object's `synthesis.enabled` is `false` (set by `--no-synthesize` or by config).
+- The scope object's `assessment.enabled` is `false` (synthesis depends on Findings; can't generate without them).
+
+**Gap-detection heuristic.** A NotSatisfied row is **synthesizable** when ALL of:
+
+1. The Findings paragraph contains a positive evidence claim ("the evidence directly supports", "the system does", "the implementation describes").
+2. The Findings paragraph names a missing artifact, not a missing implementation ("does not explicitly map", "no document specifies", "no artifact maps", "lacks a written matrix"). Missing-implementation gaps ("no automated workflow detected", "no audit logging") are NOT synthesizable.
+3. The orchestrator has the inputs to synthesize the missing artifact from package contents (code, config, IaC, evidence files). Operational/policy artifacts (signed AUPs, training certificates, HR records) are NOT synthesizable.
+
+Spurious drafts are worse than no draft — when unsure, do not synthesize.
+
+**Templates** (full content in `references/synthesis-patterns.md`):
+
+| Pattern | Typical Determine If IDs | Output filename |
+|---|---|---|
+| User role matrix | `AC-02(d)`, `AC-06(01)`, `AC-06(02)`, `AC-06(05)` | `role-matrix-draft.md` |
+| Account-type definition table | `AC-02(a)` | `account-types-draft.md` |
+| Privileged-account inventory | `AC-06(02)`, `AU-09(04)` | `privileged-accounts-draft.md` |
+| System-component inventory | `CM-08`, `PL-02` | `system-components-draft.md` |
+| Continuous-monitoring sampling plan | `CA-07` | `conmon-sampling-plan-draft.md` |
+
+Each draft has YAML frontmatter (`status: DRAFT`, `generated_by`, `generated_from`, `needs_review: true`, `gap_addressed`, `sources`) and a strong banner:
+
+```markdown
+> ⚠ **DRAFT — generated from code inspection.** This document was synthesized
+> by the ATO orchestrator from the role definitions and authorization
+> middleware in this repository. It has NOT been reviewed by the system
+> owner. Read carefully, edit, and decide whether to adopt before
+> referencing it as official ATO evidence.
+```
+
+**Output paths:**
+
+- Draft: `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<artifact-slug>.md`
+- Inventory: `docs/ato-package/SYNTHESIZED_ARTIFACTS.md` (one row per draft, header explains review workflow)
+
+**Side-effect on Findings.** When Step 6.6 generates a draft, append a sentence to the Determine If ID's Findings paragraph: "A draft artifact has been generated at `<path>` for review." The Result stays `NotSatisfied` — the draft is not adopted yet.
+
+### `--accept-synthesized` flag (auto-promote)
+
+When the scope object's `synthesis.auto_accept` is `true` (set by `--accept-synthesized`), Step 6.6 auto-promotes each draft after generating it.
+
+**Auto-promote semantics:**
+
+1. Generate the draft normally under `synthesized/<artifact-slug>.md`.
+2. Copy the draft to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact-slug>.md` (one level up). The promoted copy:
+   - Replaces the `⚠ DRAFT` banner with `> Generated by ato-artifact-collector on <date>; reviewed-and-accepted=auto via --accept-synthesized.`
+   - Keeps `generated_by` and `generated_from` frontmatter for audit.
+   - Sets `status: ACCEPTED-AUTO` (was `DRAFT`).
+3. Re-run the assessment for that Determine If ID. If the missing artifact is now present, flip `Result: Satisfied` and update the Findings: "The evidence supports the requirement, including the synthesized role matrix at `<path>` (auto-promoted via `--accept-synthesized`; review before authoritative submission)."
+4. Update `SYNTHESIZED_ARTIFACTS.md`'s row to status `ACCEPTED (auto, <ISO timestamp>)`.
+
+**Loud signaling.** Auto-promotion is risky — drafts make assertions about the system from code inspection alone, and they may disagree with org policy. The orchestrator surfaces every auto-promoted artifact loudly:
+
+1. **End-of-run summary block.** Print at the end of the orchestrator's output:
+   ```
+   ⚠ AUTO-PROMOTED: 5 synthesized artifacts adopted as evidence.
+     - controls/AC-access-control/evidence/AC-02/AC-02(d)/role-matrix-draft.md
+     - controls/AC-access-control/evidence/AC-02/AC-02(a)/account-types-draft.md
+     - controls/AC-access-control/evidence/AC-06/AC-06(02)/privileged-accounts-draft.md
+     - controls/CM-configuration-management/evidence/CM-08/system-components-draft.md
+     - controls/CA-assessment-authorization/evidence/CA-07/conmon-sampling-plan-draft.md
+     Review SYNTHESIZED_ARTIFACTS.md and each promoted file before treating
+     this package as authoritative.
+   ```
+2. **INDEX.md banner.** Insert at the top of `docs/ato-package/INDEX.md`, before the table of contents:
+   ```markdown
+   > ⚠ **AUTO-PROMOTED ARTIFACTS PRESENT.** This package contains N
+   > synthesized artifacts that were auto-promoted from drafts via the
+   > `--accept-synthesized` flag. Review `SYNTHESIZED_ARTIFACTS.md` and
+   > each promoted file before authoritative submission.
+   ```
+3. **CHECKLIST.md notes column.** For every Determine If ID whose Result was flipped from NotSatisfied to Satisfied due to auto-promotion, the Notes column reads `Auto-promoted draft — review before submission`.
+
+**Idempotency on re-run with `--accept-synthesized`.** If a previously-promoted file already exists at `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact-slug>.md`, Step 6.6:
+
+- Generates the new draft under `synthesized/`.
+- Compares the new draft against the existing promoted file. If byte-identical, do nothing — the artifact is already adopted (idempotent).
+- If different, write the new draft to `synthesized/` and set `SYNTHESIZED_ARTIFACTS.md`'s row to status `DRAFT-CHANGED (auto-promoted-stale, <date>)`. **Never auto-overwrite the existing promoted file.** The orchestrator never destroys a previously-accepted artifact silently.
+
+After Step 6.6 completes, the package has all draft artifacts in place (and, if auto-promoted, copies at the parent level). Proceed to Step 6.7.
 
 ## Step 6.7: Emit GRC assessment CSVs
 
