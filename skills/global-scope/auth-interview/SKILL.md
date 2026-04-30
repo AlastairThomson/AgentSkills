@@ -1,6 +1,6 @@
 ---
 name: auth-interview
-description: "Interactive setup for ~/.agent-skills/auth/auth.yaml — walks the user through which external sources (AWS, Azure, SharePoint/M365, SMB) they use, which LLM providers they use (Anthropic, OpenAI, Gemini, Groq, HuggingFace, Mistral, Cohere, local Ollama/llama.cpp/vLLM), and where each credential is stored (1Password, Bitwarden, Keeper, Vault, macOS Keychain, Windows Credential Manager, Linux libsecret, OAuth interactive, env vars, or a custom script). Writes the config with chmod 0600. Use when the user says 'set up auth', 'configure credentials', 'first-time setup', or when `auth-config` reports no config file exists."
+description: "Interactive setup for ~/.agent-skills/auth/auth.yaml — walks the user through which external sources (AWS, Azure, SharePoint/M365, SMB) they use, which LLM providers they use (Anthropic, OpenAI, Gemini, Groq, HuggingFace, Mistral, Cohere, local Ollama/llama.cpp/vLLM), and where each credential lives (1Password, Bitwarden, Keeper, Vault, macOS Keychain, Windows Credential Manager, Linux libsecret, OAuth interactive, env vars, custom script, or a consumer subscription like Claude Pro/Max/Team where there is no API key). Writes the config with chmod 0600. Use when the user says 'set up auth', 'configure credentials', 'first-time setup', or when `auth-config` reports no config file exists."
 ---
 
 # Auth Interview
@@ -77,7 +77,41 @@ Ask once which providers the user uses:
 > - Local Ollama · Local llama.cpp · Local vLLM · Local LM Studio
 > - Other (specify)
 
-For each selected hosted provider, run the same provider-type question flow as Section 1 (1Password / Bitwarden / Keychain / env / script / …), then ask:
+### 2a — Subscription vs API key (ask first, before any vault questions)
+
+For each hosted provider that has a consumer-subscription path (currently **Anthropic** via Claude Pro/Max/Team, **OpenAI** via ChatGPT Plus/Team if the user is on Codex CLI, **Google Gemini** via a personal Google account in AI Studio), ask **before** the vault question:
+
+> `AskUserQuestion`: How do you access <provider>?
+> Options:
+> - **API key** (separate paid API workspace; key lives in a vault / env var / etc.)
+> - **Subscription** (e.g., Claude Pro/Max/Team via the `claude` CLI; no separate API key — auth is managed by the CLI's `/login` flow)
+> - **Both** (API key for raw API calls; subscription for the CLI itself)
+
+Branch on the answer:
+
+- **API key** → fall through to the vault flow below (Section 2b).
+- **Subscription** → record the subscription entry only. Skip the vault question and the env-var question entirely. Schema:
+
+  ```yaml
+  model_providers:
+    anthropic:
+      provider: subscription
+      cli: claude                # or codex / gemini
+      plan: max                  # optional, free-form: pro / max / team / enterprise
+      validate: claude --version # optional; most subscription CLIs lack an offline auth check
+      note: |
+        Anthropic auth is via Claude Pro/Max subscription managed by the
+        `claude` CLI. There is no separate API key — skills that require
+        raw API access must use a different provider entry or skip.
+  ```
+
+  Tell the user clearly: *"`auth-config` will return `subscription_no_api_key` to any caller asking for an `ANTHROPIC_API_KEY`. Skills running inside Claude Code itself inherit the subscription transparently and don't need the key. Skills that need raw API access (multi-model orchestration, fan-out from a non-Claude harness) will halt with a clear error pointing the user back here to add a separate API-key entry."*
+
+- **Both** → record TWO entries: a `subscription` entry as above, AND an API-key entry under a distinct key (e.g., `anthropic_api:` alongside `anthropic:`). Run the vault flow for the API-key entry. Document the dual entry in the yaml's leading comment so future-you knows why there are two.
+
+### 2b — Vault flow for API-key providers
+
+For each provider that took the **API key** path (or has no subscription option, e.g., Groq / HuggingFace / Mistral / Cohere), run the same provider-type question flow as Section 1 (1Password / Bitwarden / Keychain / env / script / …), then ask:
 
 > `AskUserQuestion`: Env var name to export the key into?
 > Pre-filled defaults:
@@ -134,6 +168,12 @@ smb          script           mount | grep ...   ✗ (will mount on first use)
 Tell the user: "Non-✓ rows aren't errors — preauth will run when the skill first needs that source. But if a source fails repeatedly, re-run `auth-interview` to fix the config."
 
 For model providers, do the same dry validation: try to resolve each entry (run the lookup, check the env var gets a non-empty value) and report. Do not print the actual values — just "resolved" vs "failed" vs "needs unlock (e.g. `bw unlock`)."
+
+For `provider: subscription` entries, validation is different:
+
+- If a `validate:` command was supplied, run it and report ✓/✗.
+- If no `validate:` was supplied, report `subscription (no offline check; verify by running the CLI itself)`.
+- **Never** flag a subscription entry as failed because there's no API key to expand — that's the whole point of the subscription provider type. The post-write summary should make this clear with a note: *"Subscription entries don't expose an API key. `auth-config` will return `subscription_no_api_key` to callers asking for one. Skills that run inside the subscribing CLI inherit access transparently."*
 
 ## Section 4 — Update mode
 
