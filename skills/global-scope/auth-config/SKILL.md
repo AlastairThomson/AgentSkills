@@ -1,6 +1,6 @@
 ---
 name: auth-config
-description: "Resolve credentials for external resources (AWS, Azure, SharePoint/M365, SMB, model-provider APIs) via `~/.agent-skills/auth/auth.yaml`. Supports 1Password, Bitwarden, LastPass, Keeper, HashiCorp Vault, macOS Keychain, Windows Credential Manager, Linux libsecret, OAuth interactive flows, env vars, and user scripts. Use when a skill is about to make a credentialed external call (AWS/Azure/SharePoint/SMB discovery, LLM API call from a multi-model agent) and needs to validate the session first. Read-only — never writes credentials."
+description: "Resolve credentials for external resources (AWS, Azure, SharePoint/M365, SMB, model-provider APIs) via `~/.agent-skills/auth/auth.yaml`. Supports 1Password, Bitwarden, LastPass, Keeper, HashiCorp Vault, macOS Keychain, Windows Credential Manager, Linux libsecret, OAuth interactive flows, env vars, user scripts, and consumer subscription sessions (e.g., Claude Pro/Max/Team via the `claude` CLI — returns `subscription_no_api_key` when callers ask for an API key). Use when a skill is about to make a credentialed external call (AWS/Azure/SharePoint/SMB discovery, LLM API call from a multi-model agent) and needs to validate the session first. Read-only — never writes credentials."
 ---
 
 # Auth Config
@@ -65,6 +65,8 @@ model_providers:
 
 For purely local providers (Ollama, llama.cpp, vLLM) with no API key, use `provider: none` and just set `base_url`.
 
+For consumer-subscription access (Claude Pro/Max/Team via the `claude` CLI; ChatGPT via Codex CLI; Gemini via personal Google account), use `provider: subscription`. There is no API key to extract — the subscription session lives in the CLI's own store. When a caller asks `auth-config` to resolve such an entry into an env var, it returns the typed error `subscription_no_api_key`. Skills running inside the subscribing CLI itself inherit access transparently and don't need the env var; skills that need raw API access must halt with a clear message naming the user's options (add a separate `provider: env` / `onepassword` / etc. entry pointing at an API key, or accept that the skill cannot run for subscription-only users).
+
 ## Provider types
 
 See `references/providers.md` for the full cheatsheet. Summary:
@@ -83,6 +85,7 @@ See `references/providers.md` for the full cheatsheet. Summary:
 | `env` | Nothing | Value already exported in shell |
 | `script` | Whatever the script needs | Escape hatch — arbitrary command |
 | `none` | Nothing | No authentication required |
+| `subscription` | The provider's CLI (`claude`, `codex`, `gemini`) | Consumer subscription session (e.g., Claude Pro/Max). Returns `subscription_no_api_key` when callers ask for an API key — callers either skip (running inside the subscribing CLI) or fail loudly with guidance to add a separate API-key entry. |
 
 **Apple Passwords gotcha.** The Apple Passwords app on macOS does not expose a CLI. Data is synced into the macOS Keychain but not programmatically guaranteed to be there — especially for items created directly in Passwords rather than migrated from Keychain. If a credential lives in Apple Passwords only, the user must either (a) duplicate it into macOS Keychain (`security add-generic-password ...`) or (b) pick a different vault. `auth-interview` surfaces this warning when the user selects macOS Keychain.
 
