@@ -190,6 +190,56 @@ poam:                                         # POA&M generator behavior (post-S
     High: 30                                  # require tighter windows.
     Moderate: 90
     Low: 180
+
+assessment:                                   # Per-Determine-If-ID assessment pass
+                                              # (Step 6.5: generate Findings + Result for
+                                              # every Determine If ID).
+  enabled: true                               # PR-B default: true. The orchestrator
+                                              # populates Findings + Result for every
+                                              # Determine If ID per the AMIS-style
+                                              # assessment template. The CLI flag
+                                              # `--no-assessment` forces this to false
+                                              # per-run; when false, the orchestrator
+                                              # still emits the H3 scaffolding and the
+                                              # Determine If Statement but skips
+                                              # Findings/Result and emits a 7-column CSV
+                                              # without the Result/Findings columns.
+                                              # See `references/assessment-template.md`.
+
+synthesis:                                    # Gap-driven artifact synthesis
+                                              # (Step 6.6: draft missing artifacts for
+                                              # "implementation present, artifact missing"
+                                              # gaps).
+  enabled: true                               # Default true. Drafts land under
+                                              # `synthesized/` with a DRAFT banner. The
+                                              # CLI flag `--no-synthesize` forces this
+                                              # to false per-run. When false, gaps are
+                                              # named textually in Findings paragraphs
+                                              # but no draft files are written.
+                                              # Synthesis is automatically skipped when
+                                              # `assessment.enabled` is false.
+  auto_accept: false                          # Default false (drafts stay under
+                                              # `synthesized/` for human review). The
+                                              # CLI flag `--accept-synthesized` forces
+                                              # this to true per-run; auto-promoted
+                                              # artifacts are loudly signaled (end-of-run
+                                              # summary, INDEX.md banner, CHECKLIST notes
+                                              # column). See `references/synthesis-patterns.md`.
+                                              # Risk: synthesized drafts make assertions
+                                              # about the system from code inspection
+                                              # alone; org policy may disagree. The flag
+                                              # exists for fast iteration; loud signaling
+                                              # is the safeguard.
+
+csv_export:                                   # GRC assessment CSV emission (Step 6.7).
+  enabled: true                               # Default true. When false, no
+                                              # `<cf>-assessment.csv` files are written
+                                              # and `_master-assessment.csv` is skipped.
+  master_file: true                           # Default true. When false, only per-family
+                                              # CSVs are emitted; the master CSV
+                                              # (`controls/_master-assessment.csv`) is
+                                              # skipped. Useful when the package consumer
+                                              # works exclusively per-family.
 ```
 
 ## US-region allow lists
@@ -433,6 +483,11 @@ The orchestrator rejects a config that:
   `libraries` field are accepted with a deprecation warning — the SharePoint
   sibling defaults `libraries` to `["Documents"]` per site in legacy mode and
   treats each legacy folder string as `Documents/<path>`.)
+- Sets `assessment.enabled` to a value other than `true` or `false`
+- Sets `synthesis.enabled` to a value other than `true` or `false`
+- Sets `synthesis.auto_accept` to a value other than `true` or `false`
+- Sets `csv_export.enabled` to a value other than `true` or `false`
+- Sets `csv_export.master_file` to a value other than `true` or `false`
 
 On validation failure, the skill prints the offending field path and refuses
 to proceed. The user fixes the config and re-runs.

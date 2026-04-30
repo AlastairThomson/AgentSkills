@@ -354,6 +354,43 @@ base_url: http://localhost:11434   # required for local model providers
 
 ---
 
+## `subscription` — Provider access via a consumer subscription, no API key
+
+**Install:** Whatever CLI manages the subscription session (`claude` for Claude Pro/Max/Team; `codex` for ChatGPT Plus/Team if Codex CLI is installed; `gemini` for AI Studio personal).
+
+**Schema:**
+
+```yaml
+provider: subscription
+cli: claude                    # claude | codex | gemini | <other>
+plan: max                      # optional, free-form: pro | max | team | enterprise
+validate: claude --version     # optional; caller-supplied check that the CLI is installed
+                               # (most subscription CLIs have no offline auth-check command)
+note: |                        # optional; surfaced in error messages to callers
+  Anthropic auth is via Claude Pro/Max subscription managed by the
+  `claude` CLI. There is no separate API key — skills that require
+  raw API access must use a different provider entry or skip.
+```
+
+**Source mode expansion:** No-op. Subscription credentials live inside the CLI's own session store (`~/.claude/`, `~/.codex/`, etc.). The CLI manages refresh and re-auth itself.
+
+**Key-lookup mode:** **Unsupported.** A subscription session does NOT expose an API key. When `auth-config` is asked to resolve a model-provider entry whose `provider: subscription`, it returns a typed error: `subscription_no_api_key`. Callers handle this in one of two ways:
+
+1. **Skip** — the caller is itself running inside the subscribing CLI (e.g., a Claude Code skill calling Anthropic) and inherits the subscription's model access transparently. No env var is needed; the parent runtime has already provisioned the model.
+2. **Fall back** — the caller needs raw API access (e.g., a multi-model agent that fans out to Claude as one of several models from a non-Claude harness). It should fail loudly with a clear message naming the user's options: add a separate `provider: env` / `provider: onepassword` / etc. entry pointing at an API key, or accept that this skill cannot run for subscription-only users.
+
+**Validation:** When `validate:` is provided, run it; non-zero exit means the CLI is not installed / not logged in. When omitted, validation is a no-op (most subscription CLIs lack a portable offline auth-check command). The validation step never tries to extract a key.
+
+**Use when:** The user pays for the provider via a consumer subscription (Claude Pro / Max / Team; ChatGPT Plus / Team via the Codex CLI's auth flow; Gemini via Google account) and uses the provider's own CLI rather than a separate API workspace. **Common for individual developers and small teams** — subscription-only access is often the cheapest path to the underlying model and is increasingly the default for Claude Code users.
+
+**Gotchas:**
+
+- Don't pair `provider: subscription` with `env_var:`. Subscriptions don't produce a key to export. If the user actually has both a subscription AND a separate API key, model that as two separate entries (e.g., `anthropic_subscription:` + `anthropic_api:`) and let consumers pick.
+- The `cli:` field is informational; this skill never invokes the CLI on the user's behalf. If the CLI's session is missing or expired, the caller surfaces that and the user runs `/login` (Claude Code), `codex login`, etc., themselves.
+- Subscription terms vary by provider — quota, rate limits, and which models are accessible. The config records *which* subscription, not its terms; callers should not assume any particular model is available.
+
+---
+
 ## Enterprise PAM tools NOT yet typed
 
 These appear in the PasswordTools survey but don't have a typed provider yet. Use `script:` with the pattern sketched in the comment, or request a typed provider by opening an issue:

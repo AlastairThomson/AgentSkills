@@ -78,9 +78,21 @@ docs/ato-package/
 │   └── 14-privacy-impact-assessment/
 │
 └── controls/                       The 20 NIST 800-53 Rev 5 control families
+    ├── _master-assessment.csv             ← Master GRC CSV (every Determine If ID across all 20 families)
     ├── AC-access-control/
-    │   ├── ac-implementation.md
-    │   └── evidence/AC-2/, AC-3/, AC-6/ ...
+    │   ├── ac-implementation.md           ← Family narrative; H3 sub-section per Determine If ID
+    │   ├── ac-assessment.csv              ← Per-family GRC CSV
+    │   └── evidence/
+    │       ├── AC-02/                     ← Parent-level evidence files copied here
+    │       │   ├── <files>
+    │       │   ├── AC-02(a)/_relevant-evidence.md   ← Manifest pointing at parent-level files
+    │       │   ├── AC-02(d)/_relevant-evidence.md
+    │       │   ├── AC-02(01)/_relevant-evidence.md
+    │       │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md
+    │       ├── AC-03/                     ← Single Determine If ID — no sub-control nesting
+    │       │   ├── <files>
+    │       │   └── _relevant-evidence.md
+    │       └── ...
     ├── AT-awareness-training/
     ├── AU-audit-accountability/
     ├── CA-assessment-authorization/
@@ -256,6 +268,9 @@ All flags live on `/ato-artifact-collector`. The `ato-vulnerability-scanner` sta
 | Flag | Effect |
 |---|---|
 | `--no-vuln-scan` | Disable the pre-collection vulnerability scan. By default the scan runs every collection (Step 1.5). |
+| `--no-assessment` | Disable the assessment pass (Step 6.5) AND synthesis (Step 6.6). The orchestrator still emits the family narrative with H3 sub-sections + Determine If Statement, but skips Findings/Result and emits a 7-column CSV (no `Result`/`Findings` columns). |
+| `--no-synthesize` | Disable synthesis (Step 6.6) only. Findings + Result still emit; gaps are named textually but no drafts are written and no `SYNTHESIZED_ARTIFACTS.md` inventory is produced. |
+| `--accept-synthesized` | Auto-promote each synthesized draft to evidence (one folder up from `synthesized/`); flip Result to Satisfied for that Determine If ID. Loud signaling: end-of-run summary block, `INDEX.md` banner, `CHECKLIST.md` notes column. **Risky** — synthesized drafts make assertions about the system from code inspection alone and may disagree with org policy. The flag exists for fast iteration; review every promoted artifact before authoritative submission. |
 | `--remediation` | Auto-invoke `ato-remediation-guidance` after Step 8. Without this flag, remediation guidance runs only when the user explicitly asks afterward. |
 | `--poam` | Auto-invoke `ato-poam-generator` after the remediation step. **Implies `--remediation`** (POA&M consumes the remediation output). If passed alone, the orchestrator logs `[INFO] --poam implies --remediation; enabling.` and proceeds with both. |
 
@@ -284,8 +299,23 @@ Step 2    DISCOVER   Scan repo for the 20 artifact categories;
 Step 3    COLLECT    Copy discovered files into docs/ato-package/
 Step 4    GENERATE   Synthesize narrative documents with embedded Mermaid diagrams,
                      [CR-NNN] citations
+Step 4.5  ENUMERATE  Build .staging/sub-control-inventory.json — every Determine If ID
+                     for every in-scope control (sub-letters, enhancements, enhancement-with-sub-letter)
+Step 4.6  SC-ROUTE   Sub-control evidence routing — emit
+                     evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/_relevant-evidence.md manifests
 Step 5    ANALYZE    Deep code analysis for security-relevant patterns
-Step 6    GAP        Identify missing items per sub-item
+Step 6    GAP        Identify missing items per sub-item;
+                     per-family narrative iterates EVERY Determine If ID with H3 sub-sections
+Step 6.5  ASSESS     Assessment pass — for each Determine If ID, generate Findings paragraph
+                     + Result (Satisfied / NotSatisfied / blank). (Skipped if --no-assessment.)
+Step 6.6  SYNTHESIZE For each NotSatisfied row where the gap is "implementation present,
+                     artifact missing", generate a draft document under synthesized/ + a
+                     SYNTHESIZED_ARTIFACTS.md inventory at package root. With
+                     --accept-synthesized, drafts auto-promote and Result flips to
+                     Satisfied (loud signaling: end-of-run summary, INDEX banner, CHECKLIST
+                     notes column).
+Step 6.7  CSV        Emit per-family <cf>-assessment.csv and _master-assessment.csv
+                     (9-column GRC schema with Result/Findings populated, RFC-4180 quoting)
 Step 7    CITATIONS  Merge [CR-NNN] from repo + sibling staging batches
                      (sharepoint / aws / azure / smb / vulnscan) into CODE_REFERENCES.md
 Step 8    INDEX      Produce INDEX.md and CHECKLIST.md
@@ -322,6 +352,149 @@ For `vulnscan`, the link is an in-package anchor (`controls/RA-risk-assessment/e
 | ⚪ GRAY | Inherited (CSP), operational, or otherwise out of scope for this repo |
 
 `ato-remediation-guidance` and `ato-poam-generator` both prioritize RED rows; YELLOW rows feed in only when there's enough context.
+
+### Sub-control evidence layout
+
+Per-control evidence sits inside each control family at sub-control granularity, mirroring the federal assessment-spreadsheet pattern (one row per **Determine If ID**: lettered sub-parts of the control body like `AC-02(a)`–`AC-02(l)`, control enhancements like `AC-02(01)`, and enhancement-with-sub-letter chains like `AC-02(12)(b)`).
+
+```
+controls/AC-access-control/
+├── ac-implementation.md         ← Family narrative; H3 sub-section per Determine If ID
+├── ac-assessment.csv            ← Per-family GRC CSV
+└── evidence/
+    ├── AC-02/                   ← Parent-level: where files physically live
+    │   ├── auth.ts                                         ← copied from repo / sibling
+    │   ├── role-check-middleware.ts
+    │   ├── role-matrix.yaml
+    │   ├── AC-02(a)/_relevant-evidence.md                  ← Manifest: relative paths to parent files
+    │   ├── AC-02(d)/_relevant-evidence.md
+    │   ├── AC-02(01)/_relevant-evidence.md                 ← Enhancement, peer of sub-letters
+    │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md    ← Enhancement-with-sub-letter, nested
+    └── AC-03/                   ← Single Determine If ID — no sub-control nesting
+        ├── AuthFilter.php
+        └── _relevant-evidence.md
+```
+
+Two rules to know:
+
+- **No file duplication within a family.** Files live once at the parent control level (`evidence/AC-02/`). Each per-Determine-If-ID sub-folder carries a `_relevant-evidence.md` manifest pointing back at the parent files by relative path. The package stays compact even when a single file is relevant to many sub-letters.
+- **Skip-redundant-nesting for simple controls.** When a control has exactly one Determine If ID (e.g., `AC-03`), evidence sits directly in `evidence/AC-03/` — no `evidence/AC-03/AC-03/` redundant nest.
+
+The full naming rules and folder semantics are in `agents/base/global-scope/ato-artifact-collector/references/sub-control-enumeration.md`.
+
+### GRC assessment CSVs (`<cf>-assessment.csv` + `_master-assessment.csv`)
+
+Step 6.7 emits one CSV per family at `controls/<CF>-<slug>/<cf>-assessment.csv` and a master CSV at `controls/_master-assessment.csv`. Both are designed for direct ingestion into GRC tools (RSA Archer, ServiceNow GRC, Excel-based POA&M trackers).
+
+**9-column schema** (header row exact):
+
+```
+Family ID,Family,Control ID,Control,Determine If ID,Determine If Statement,Method,Result,Findings
+```
+
+- One row per Determine If ID. Empty rows preserved for un-implemented sub-parts (their Determine If Statement / Method / Result / Findings columns are blank).
+- `Method` is always `Review` for orchestrator-emitted rows.
+- `Result` is `Satisfied` / `NotSatisfied` / blank — populated by the assessment pass (Step 6.5).
+- `Findings` is the assessor narrative — populated by Step 6.5 per the AMIS-style template.
+- RFC 4180 quoting: embedded commas / quotes / newlines are quoted; embedded `"` is doubled to `""`. Newlines inside narrative paragraphs are preserved as literal `\n` inside the quoted field.
+- `\n` line endings (no `\r\n`); UTF-8 without BOM.
+
+The master CSV is the master file most GRC tools want — all 20 families in one read, sorted by Family ID alphabetical → Control ID → Determine If ID.
+
+**`--no-assessment` flag.** When passed, the orchestrator emits a 7-column variant (drops `Result` and `Findings`) and skips the assessment pass and synthesis. Use this when you want the implementation-statement scaffolding without the assessment.
+
+The full schema spec, sort-order rules, and round-trip validation steps are in `agents/base/global-scope/ato-artifact-collector/references/csv-schema.md`.
+
+### Sub-control assessment and synthesized drafts
+
+The assessment pass (Step 6.5) reads each Determine If ID's requirement text from the inventory, compares it against the Determine If Statement (the implementation narrative just emitted in Step 6), and writes a **Findings paragraph** + a **Result** value into both the per-family narrative and the GRC CSV.
+
+**Findings paragraph shape** (3 sentences, sometimes 4):
+
+1. Positive evidence claim — "The evidence directly supports that [X]."
+2. Either sufficiency ("The evidence covers the entire requirement, including [Y].") or gap ("However, the determine if statement also requires [Z], which the evidence does not [explicitly map | document | specify | demonstrate].").
+3. Conclusion — "The requirement is satisfied." / "The requirement is not fully satisfied." / "The requirement cannot be assessed without [...]"
+4. (Optional) "A draft artifact has been generated at `<path>` for review." (added when Step 6.6 produces a draft)
+
+**Result decision rules:**
+
+| Findings concludes... | Result |
+|---|---|
+| "The requirement is satisfied." | `Satisfied` |
+| "The requirement is not fully satisfied." | `NotSatisfied` |
+| "The requirement cannot be assessed without [...]" | _blank_ |
+| Determine If Statement is empty (no implementation narrative) | _blank_ — Findings explains un-assessability |
+
+The orchestrator MUST NOT mark a row `Satisfied` if the Findings paragraph contains gap language ("does not", "no document", "lacks", "missing", "is not specified", "cannot be assessed"). This is a hard rule enforced by a hygiene check; halt with a clear error if violated.
+
+The full template, decision rules, and worked examples (drawn from the AMIS spreadsheet) are in `agents/base/global-scope/ato-artifact-collector/references/assessment-template.md`.
+
+### Gap-driven artifact synthesis
+
+When the assessment pass finds a `NotSatisfied` row whose gap is **"implementation present, artifact missing"** — the system enforces the requirement in code but no formal artifact documents it — Step 6.6 generates a draft artifact for human review.
+
+**Default workflow (manual review):**
+
+1. The orchestrator writes the draft to `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<artifact>.md` with a `⚠ DRAFT` banner.
+2. A row appears in the top-level `SYNTHESIZED_ARTIFACTS.md` inventory.
+3. The Result for that Determine If ID stays `NotSatisfied`; the Findings paragraph adds "A draft artifact has been generated at `<path>` for review."
+4. **You review each draft.** Edit as needed. Either:
+   - **Accept**: copy/move the file from `synthesized/<artifact>.md` to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact>.md` (one folder up). Re-run the orchestrator — Step 6.5 will detect the present artifact and flip the Result to `Satisfied`.
+   - **Reject**: delete the draft. The Determine If ID stays `NotSatisfied`; the gap rolls into the next remediation cycle via `--remediation`.
+
+**`--accept-synthesized` (auto-promote):**
+
+When passed, the orchestrator copies each draft to the parent evidence folder immediately, flips the Result to `Satisfied`, and emits **loud signaling**:
+
+- End-of-run summary block listing every promoted artifact.
+- Banner at the top of `INDEX.md`: "⚠ AUTO-PROMOTED ARTIFACTS PRESENT. ... Review SYNTHESIZED_ARTIFACTS.md before authoritative submission."
+- `Auto-promoted draft — review before submission` note in `CHECKLIST.md` for every flipped row.
+
+**Risk surface for `--accept-synthesized`.** Synthesized drafts make assertions about the system from code inspection alone. They can be wrong — a role matrix derived from `if (role === 'ADMINISTRATOR') return true` correctly classifies `ADMINISTRATOR` as Privileged from a code standpoint, but org policy might classify it differently. Auto-promoted drafts published unreviewed would inject those assertions into ATO evidence. The flag exists for fast iteration cycles; the loud signaling is the safeguard, not a substitute for review.
+
+**Common synthesized artifact patterns:**
+
+| Pattern | Typical Determine If IDs | Output filename |
+|---|---|---|
+| User role matrix (Internal/External × Privileged/Non-Privileged/No-Logical-Access) | `AC-02(d)`, `AC-06(01)`, `AC-06(02)`, `AC-06(05)` | `role-matrix-draft.md` |
+| Account-type definition table | `AC-02(a)` | `account-types-draft.md` |
+| Privileged-account inventory | `AC-06(02)`, `AU-09(04)` | `privileged-accounts-draft.md` |
+| System-component inventory | `CM-08`, `PL-02` | `system-components-draft.md` |
+| Continuous-monitoring sampling plan | `CA-07` | `conmon-sampling-plan-draft.md` |
+
+**The orchestrator does NOT synthesize:**
+
+- When the gap is missing implementation (not just missing artifact). Synthesizing would fabricate behaviour.
+- When the missing artifact is operational policy, signed documents, training certificates, or HR data. Those require human authorship.
+- When `--no-synthesize` was passed.
+
+The full gap-detection heuristic, draft templates, and auto-promote idempotency rules are in `agents/base/global-scope/ato-artifact-collector/references/synthesis-patterns.md`.
+
+#### Worked example — AC-02(d) end-to-end
+
+Given a system that enforces role-based authorization in code (`auth.ts` defines four roles, middleware enforces them) but has no document mapping those roles onto the federal Privileged / Non-Privileged / No-Logical-Access classification:
+
+1. **Step 6 emits the Determine If Statement** for `AC-02(d)`: "AMIS authorizes only NIH-Login-SAML-authenticated users... The system defines four application role memberships... and enforces access authorizations on each request through the middleware sequence... [CR-042][CR-043][CR-044]."
+
+2. **Step 6.5 generates Findings**: "The evidence and implementation statement support several portions of the requirement by identifying authorized users... and describing role-based and area-based access enforcement. However, the determine if statement also requires specification of the user role matrix attributes for each account type — specifically whether users are Internal or External and whether each account type is Privileged, Non-Privileged, or No Logical Access — and the provided evidence does not explicitly map the identified user roles or account types to those required attributes. The requirement is not fully satisfied."
+   Result: `NotSatisfied`.
+
+3. **Step 6.6 detects the synthesizable pattern** (positive evidence claim + missing-artifact gap + synthesis-able from code) and generates a draft at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/role-matrix-draft.md`. The draft has YAML frontmatter (`status: DRAFT`, `gap_addressed: "User role matrix..."`), the strong banner, and a populated table inferred from code:
+
+   | Role | Internal/External | Privilege class | Logical access | Source |
+   |---|---|---|---|---|
+   | ADMINISTRATOR | Internal | Privileged (bypasses checkAreaPermission) | All areas, all actions | [CR-043] |
+   | DATA_ENTERER | Internal | Non-Privileged | Per-area write per checkAreaPermission | [CR-044] |
+   | VIEWER | Internal | Non-Privileged | Per-area read | [CR-044] |
+   | INVESTIGATOR | Internal | Non-Privileged | Per-area read | [CR-044] |
+
+4. **Step 6.6 appends to Findings**: "A draft artifact has been generated at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/role-matrix-draft.md` for review."
+
+5. **You review.** The draft's privilege classifications match org policy. You copy `synthesized/role-matrix-draft.md` up to `evidence/AC-02/AC-02(d)/role-matrix-draft.md`.
+
+6. **You re-run** `/ato-artifact-collector --repo`. Step 6.5 sees the artifact at the parent level, generates new Findings ("The evidence supports the entire requirement, including the role matrix at... The requirement is satisfied."), and flips Result to `Satisfied`. The CSV updates accordingly.
+
+If you'd run the original collection with `--accept-synthesized`, steps 5-6 happen automatically — but the loud signaling tells you to review the auto-promoted file before submission.
 
 ### `REMEDIATION_GUIDANCE.md` shape
 
@@ -496,11 +669,25 @@ poam:
     High: 30
     Moderate: 90
     Low: 180
+
+assessment:
+  enabled: true                # default true; --no-assessment forces false per-run.
+                               # When false, no Findings/Result emitted; CSV becomes 7-column.
+
+synthesis:
+  enabled: true                # default true; --no-synthesize forces false.
+                               # Auto-skipped when assessment.enabled is false.
+  auto_accept: false           # default false (drafts stay under synthesized/ for review).
+                               # --accept-synthesized forces true; loud signaling on every run.
+
+csv_export:
+  enabled: true                # GRC assessment CSVs (Step 6.7) — default on.
+  master_file: true            # Master CSV at controls/_master-assessment.csv.
 ```
 
 User-global defaults can be set at `~/.claude/skills/ato-artifact-collector/config.yaml` (a starter copy is bundled with the agent). The merge rule is **shallow per source** — if the repo file declares a `sharepoint:` block, it fully replaces the user file's `sharepoint:` block (no field-by-field overlay).
 
-CLI flags win over config: `--no-vuln-scan` disables the scan even if `vulnerability_scan.enabled: true`. `--poam` enables POA&M generation even if `poam.enabled: false`.
+CLI flags win over config: `--no-vuln-scan` disables the scan even if `vulnerability_scan.enabled: true`. `--poam` enables POA&M generation even if `poam.enabled: false`. `--no-assessment` disables the assessment pass even if `assessment.enabled: true`. `--no-synthesize` and `--accept-synthesized` similarly override `synthesis.*`.
 
 ---
 
