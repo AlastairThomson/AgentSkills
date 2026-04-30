@@ -213,14 +213,38 @@ Before orienting on the repo, decide what the skill is allowed to touch.
    > "Scan Azure control plane (read-only, US regions only)? [y/N]"
    > "Scan SMB/Windows file shares? [y/N]"
 
-4. **Never store credentials in the scope object or anywhere on disk.** The
-   scope object carries intent only (tenant URLs, account IDs, region names,
-   UNC paths). Authentication is ambient — each sibling requires the user to
-   have already logged in via its native tool.
+   **For SharePoint specifically**, when enabled but the config's `sharepoint:`
+   block is absent or missing the `libraries:` field, prompt for the missing
+   pieces — at minimum: tenant, site URL(s), and **explicit document library
+   names per site**. Sites can have multiple libraries (default `Documents`,
+   plus org-created `ATO Evidence`, `Compliance`, `Site Assets`, etc.).
+   Scanning only the default library silently misses evidence in non-default
+   ones. Offer the user a `list` shortcut: when they type `list` instead of
+   library names, the orchestrator (or the sibling on its first call) runs
+   `m365 spo list list --webUrl <site> --output json`, filters to
+   `BaseTemplate == 101`, and shows the available libraries. Optional folder
+   filter per library is asked next; blank means scan the whole library
+   recursively.
 
-5. **Announce the resolved scope before handing off to Step 1**:
-   > "Running with: repo + sharepoint (tenant contoso, 2 sites) + aws (account
-   > 1234, region us-east-1). Azure disabled. SMB disabled."
+4. **The working repo's license, visibility, owner, or open-source status MUST NOT
+   gate external-source scanning.** When the user has configured a SharePoint /
+   AWS / Azure / SMB scope, that scope runs regardless of what kind of repo
+   the orchestrator is working in. Federal agencies (CMS, NASA, NIH, GSA,
+   USDA) actively operate open-source code that needs ATO; their internal
+   SharePoint typically holds the SSP, IRP, CMP, POA&M, and authorization
+   letters the package must include. If the operator finds itself reasoning
+   "this repo is public / open source / not federal-looking, so the
+   SharePoint isn't relevant" — stop and re-read the scope. The user's
+   explicit configuration wins.
+
+5. **Never store credentials in the scope object or anywhere on disk.** The
+   scope object carries intent only (tenant URLs, account IDs, region names,
+   UNC paths, library names). Authentication is ambient — each sibling
+   requires the user to have already logged in via its native tool.
+
+6. **Announce the resolved scope before handing off to Step 1**:
+   > "Running with: repo + sharepoint (tenant contoso, 2 sites, 4 libraries) +
+   > aws (account 1234, region us-east-1). Azure disabled. SMB disabled."
 
 If every external source is disabled (either by config or user decline), mark
 this as a repo-only run and move straight to Step 1. Do not invoke siblings,
