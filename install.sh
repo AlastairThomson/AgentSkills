@@ -59,7 +59,7 @@ KEEP_CACHE=""
 
 MANIFEST_NAME="installer-manifest.json"
 
-SUPPORTED_CLIS="claude opencode kilo codex gemini"
+SUPPORTED_CLIS="claude opencode kilo codex gemini pi"
 
 # ---- usage ----------------------------------------------------------------
 usage() {
@@ -76,6 +76,7 @@ Required:
                         kilo       → ~/.config/kilo/
                         codex      → ~/.codex/
                         gemini     → ~/.gemini/
+                        pi         → ~/.pi/agent/   (skills only — Pi has no subagents)
                       If omitted, a TTY prompt asks multi-select. In non-TTY
                       mode (e.g. pipe into sh -c) --for is required.
 
@@ -156,7 +157,21 @@ cli_root() {
         kilo)     printf '%s/.config/kilo' "$HOME" ;;
         codex)    printf '%s/.codex' "$HOME" ;;
         gemini)   printf '%s/.gemini' "$HOME" ;;
+        pi)       printf '%s/.pi/agent' "$HOME" ;;
         *) die "unknown CLI: $cli" ;;
+    esac
+}
+
+# Some CLIs only consume skills — they have no subagent concept and so the
+# installer should skip the agent rendering loop for them entirely. Pi
+# (pi.dev) is the first such CLI: it's a "minimal terminal coding harness"
+# whose only customization mechanism is skills (loaded from ~/.pi/agent/skills/
+# and ~/.agents/skills/). It has no Agent tool, no subagent_type, no equivalent
+# to ~/.claude/agents/.
+cli_has_agents() {
+    case "$1" in
+        pi) return 1 ;;
+        *)  return 0 ;;
     esac
 }
 
@@ -186,8 +201,8 @@ cli_agent_ext() {
 cli_skills_dir() {
     local cli="$1" bucket
     case "$cli" in
-        claude)                       bucket=".claude/skills" ;;
-        opencode|kilo|gemini|codex)   bucket=".agents/skills" ;;
+        claude)                          bucket=".claude/skills" ;;
+        opencode|kilo|gemini|codex|pi)   bucket=".agents/skills" ;;
         *) die "unknown CLI: $cli" ;;
     esac
     if [ -n "$DEST" ]; then
@@ -226,6 +241,7 @@ prompt_for_clis() {
         echo "  3) kilo      → ~/.config/kilo/"
         echo "  4) codex     → ~/.codex/"
         echo "  5) gemini    → ~/.gemini/"
+        echo "  6) pi        → ~/.pi/agent/   (skills only)"
         printf 'Enter comma-separated numbers or names (e.g. "1,2" or "claude,opencode"): '
     } > "$tty"
     local ans; ans=$(tty_read) || return 1
@@ -241,7 +257,8 @@ prompt_for_clis() {
             3) mapped="${mapped:+$mapped,}kilo" ;;
             4) mapped="${mapped:+$mapped,}codex" ;;
             5) mapped="${mapped:+$mapped,}gemini" ;;
-            claude|opencode|kilo|codex|gemini) mapped="${mapped:+$mapped,}$t" ;;
+            6) mapped="${mapped:+$mapped,}pi" ;;
+            claude|opencode|kilo|codex|gemini|pi) mapped="${mapped:+$mapped,}$t" ;;
             *) echo "ignored: $t" > "$tty" ;;
         esac
     done
@@ -375,6 +392,10 @@ list_install_set() {
         echo "--- $cli → $root ---"
         echo "  skills → $sdir"
         for d in "$src_skills"/*/; do [ -d "$d" ] && echo "    $(basename "$d")"; done
+        if ! cli_has_agents "$cli"; then
+            echo "  (no agents — $cli only consumes skills)"
+            continue
+        fi
         echo "  agents/:"
         for d in "$src_agents"/*/; do
             [ -d "$d" ] || continue
@@ -400,6 +421,14 @@ list_install_set() {
 # ---- install one CLI ------------------------------------------------------
 install_cli() {
     local cli="$1"
+
+    # CLIs without subagents (e.g. pi) only need their skills directory
+    # populated, which is handled by install_skills_dedup() in the main loop.
+    # Nothing to render or write under <cli-root>/agents/.
+    if ! cli_has_agents "$cli"; then
+        return 0
+    fi
+
     local src_agents="$STAGE/src/agents/base/global-scope"
     local renderer="$STAGE/src/agents/renderers/$cli.sh"
     local codex_agents_md="$STAGE/src/agents/renderers/codex-agents-md.sh"
@@ -531,15 +560,18 @@ write_manifest() {
             skills_json="${skills_json}      \"$(json_escape "$n")\",\n"
         done
 
-        for d in "$src_agents"/*/; do
-            [ -d "$d" ] || continue
-            local n; n=$(basename "$d")
-            if agent_is_dir_form "$d" && ! cli_uses_flat_only "$cli"; then
-                dir_json="${dir_json}      \"$(json_escape "$n")\",\n"
-            else
-                flat_json="${flat_json}      \"$(json_escape "$n")\",\n"
-            fi
-        done
+        # Skills-only CLIs (e.g. pi) have no agents — leave both arrays empty.
+        if cli_has_agents "$cli"; then
+            for d in "$src_agents"/*/; do
+                [ -d "$d" ] || continue
+                local n; n=$(basename "$d")
+                if agent_is_dir_form "$d" && ! cli_uses_flat_only "$cli"; then
+                    dir_json="${dir_json}      \"$(json_escape "$n")\",\n"
+                else
+                    flat_json="${flat_json}      \"$(json_escape "$n")\",\n"
+                fi
+            done
+        fi
 
         skills_json=$(printf '%b' "$skills_json" | sed '$s/,$//')
         flat_json=$(printf '%b' "$flat_json" | sed '$s/,$//')
@@ -792,7 +824,11 @@ case "$ACTION" in
 
         echo "Installing …"
         for cli in $CLIS; do
-            echo "  • $cli (agents)"
+            if cli_has_agents "$cli"; then
+                echo "  • $cli (agents)"
+            else
+                echo "  • $cli (skills only)"
+            fi
             install_cli "$cli"
         done
 
