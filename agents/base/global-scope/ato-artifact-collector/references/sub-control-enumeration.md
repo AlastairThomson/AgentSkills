@@ -121,7 +121,7 @@ After enumeration, write a single JSON file at `docs/ato-package/.staging/sub-co
 
 | Step | Consumer | Use |
 |---|---|---|
-| 4.6 | Sub-control evidence routing | Walks every Determine If ID; emits `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/_relevant-evidence.md` manifests pointing at parent-level evidence files |
+| 4.6 | Sub-control evidence routing | Walks every Determine If ID; emits `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md` manifests pointing at parent-level evidence files. Filename embeds family + control + Determine If ID so each manifest stays uniquely identifiable when the package is flattened. Simple-control case (Determine If ID equals Control ID) drops the redundant DI segment. |
 | 6 | Per-family narrative | Iterates Determine If IDs to produce H3 sub-sections with Determine If Statement blocks |
 | 6.5 | Assessment pass (PR-B) | Compares narrative against `text` field; produces Findings + Result |
 | 6.6 | Synthesized drafts (PR-B) | Walks NotSatisfied Determine If IDs; checks for "implementation present, artifact missing" pattern |

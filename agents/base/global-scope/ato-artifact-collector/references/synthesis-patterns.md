@@ -1,6 +1,6 @@
 # Gap-driven artifact synthesis — Step 6.6 reference
 
-When the assessment pass classifies a Determine If ID as `NotSatisfied` because the **implementation exists in code/config but a formal artifact is missing**, Step 6.6 generates a draft artifact for human review. The draft is written under `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<artifact-slug>.md` and listed in a top-level `SYNTHESIZED_ARTIFACTS.md` inventory.
+When the assessment pass classifies a Determine If ID as `NotSatisfied` because the **implementation exists in code/config but a formal artifact is missing**, Step 6.6 generates a draft artifact for human review. The draft is written under `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` and listed in a top-level `SYNTHESIZED_ARTIFACTS.md` inventory. The `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_` prefix matches the Step 4.6 manifest convention: it keeps every orchestrator-generated file uniquely identifiable when an assessor flattens the package or copies files into a GRC tool.
 
 This reference defines the gap-detection heuristic, the templates for common synthesized artifacts, and the auto-promote semantics for the `--accept-synthesized` flag.
 
@@ -24,7 +24,7 @@ When unsure, **do not synthesize**. The Findings paragraph already names the gap
 
 ## Common synthesizable artifacts
 
-These are the recurring "implementation present, artifact missing" patterns the orchestrator should recognise. Each has a template; all live under `synthesized/<artifact-slug>.md`.
+These are the recurring "implementation present, artifact missing" patterns the orchestrator should recognise. Each has a template; all live under `synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md`. The `<artifact-slug>` portion is the human-readable shorthand listed below; the prefix is computed from the Determine If ID's parent-control family + control + Determine If ID.
 
 ### 1. User role matrix (AC-02(d), AC-06(01), AC-06(02), AC-06(05))
 
@@ -32,7 +32,7 @@ Required when the system enforces role-based authorization in code but no artifa
 
 **Inputs**: role enum / type / constants in code; the role-check middleware; any per-role permission matrix in config.
 
-**Template** (`role-matrix-draft.md`):
+**Template** (`<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_role-matrix-draft.md` — e.g. `AC_AC-02_AC-02(d)_role-matrix-draft.md`):
 
 ```markdown
 ---
@@ -101,7 +101,7 @@ Required when the system has well-defined account types in code but no document 
 
 **Inputs**: account types in code, identity provider config, service principal definitions.
 
-**Template** (`account-types-draft.md`):
+**Template** (`<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_account-types-draft.md` — e.g. `AC_AC-02_AC-02(a)_account-types-draft.md`):
 
 ```markdown
 ---
@@ -137,7 +137,7 @@ Required when the system has privileged-access logic in code but no inventory of
 
 **Inputs**: role-grant code, the database schema or fixture data showing initial privileged users, IaC role assignments, the audit-log code that records privilege use.
 
-**Template** (`privileged-accounts-draft.md`):
+**Template** (`<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_privileged-accounts-draft.md` — e.g. `AC_AC-06_AC-06(02)_privileged-accounts-draft.md`):
 
 ```markdown
 ---
@@ -184,7 +184,7 @@ Required when the SDD names the system's components (containers, services, IaC r
 
 **Inputs**: Dockerfiles, docker-compose, K8s manifests, IaC, package manifests, dependency files.
 
-**Template** (`system-components-draft.md`):
+**Template** (`<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_system-components-draft.md` — e.g. `CM_CM-08_system-components-draft.md` for a single-Determine-If control):
 
 ```markdown
 ---
@@ -230,7 +230,7 @@ Required when the system has CI/CD-driven scanning (vuln, secret, SAST) but no d
 
 **Inputs**: CI workflow files, scheduled-scan configs, the vulnerability scanner's output from Step 1.5.
 
-**Template** (`conmon-sampling-plan-draft.md`):
+**Template** (`<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_conmon-sampling-plan-draft.md` — e.g. `CA_CA-07_conmon-sampling-plan-draft.md`):
 
 ```markdown
 ---
@@ -284,18 +284,21 @@ directory. **Drafts are NOT official ATO evidence until reviewed.**
 1. Open the draft and check every entry against the live system state.
 2. Edit or rewrite as needed.
 3. Either:
-   - **Accept**: copy or move the file from `synthesized/<artifact>.md`
-     up one folder to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact>.md`
-     and re-run the orchestrator (Step 6.5 will detect the present
-     artifact and flip Result to Satisfied).
+   - **Accept**: copy or move the file from
+     `synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md`
+     up one folder to
+     `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md`
+     (preserve the filename so the audit trail is preserved) and re-run
+     the orchestrator (Step 6.5 will detect the present artifact and flip
+     Result to Satisfied).
    - **Reject**: delete the draft. The Determine If ID stays
      NotSatisfied; the gap rolls into the next remediation cycle.
 
 | Control ID | Determine If ID | Artifact | Status | Path |
 |---|---|---|---|---|
-| AC-02 | AC-02(d) | User role matrix | DRAFT — needs review | `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/role-matrix-draft.md` |
-| AC-02 | AC-02(a) | Account-type definitions | DRAFT — needs review | ... |
-| CM-08 | CM-08 | System-component inventory | DRAFT — needs review | ... |
+| AC-02 | AC-02(d) | User role matrix | DRAFT — needs review | `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/AC_AC-02_AC-02(d)_role-matrix-draft.md` |
+| AC-02 | AC-02(a) | Account-type definitions | DRAFT — needs review | `controls/AC-access-control/evidence/AC-02/AC-02(a)/synthesized/AC_AC-02_AC-02(a)_account-types-draft.md` |
+| CM-08 | CM-08 | System-component inventory | DRAFT — needs review | `controls/CM-configuration-management/evidence/CM-08/synthesized/CM_CM-08_system-components-draft.md` |
 ```
 
 When `--accept-synthesized` was set, rows that the orchestrator auto-promoted carry status `ACCEPTED (auto, <ISO timestamp>)` instead of `DRAFT — needs review`. The original draft stays under `synthesized/` for audit; the promoted copy is at the parent level.
@@ -305,7 +308,7 @@ When `--accept-synthesized` was set, rows that the orchestrator auto-promoted ca
 When the user invokes the orchestrator with `--accept-synthesized`:
 
 1. Step 6.6 generates the draft normally under `synthesized/`.
-2. Immediately after writing the draft, Step 6.6 copies it from `synthesized/<artifact>.md` to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact>.md` (one level up). The promoted copy:
+2. Immediately after writing the draft, Step 6.6 copies it from `synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` (one level up; same filename). The promoted copy:
    - Drops the `⚠ DRAFT` banner (replaced with a `> Generated by ato-artifact-collector on <date>; reviewed-and-accepted=auto via --accept-synthesized.` banner).
    - Keeps the YAML frontmatter's `generated_by` and `generated_from` lines for audit traceability.
    - Sets `status: ACCEPTED-AUTO` (was `DRAFT`).
@@ -317,11 +320,11 @@ When the user invokes the orchestrator with `--accept-synthesized`:
 1. **End-of-run summary block.** Print a prominent block at the end of the orchestrator's output:
    ```
    ⚠ AUTO-PROMOTED: 5 synthesized artifacts adopted as evidence.
-     - controls/AC-access-control/evidence/AC-02/AC-02(d)/role-matrix-draft.md
-     - controls/AC-access-control/evidence/AC-02/AC-02(a)/account-types-draft.md
-     - controls/AC-access-control/evidence/AC-06/AC-06(02)/privileged-accounts-draft.md
-     - controls/CM-configuration-management/evidence/CM-08/system-components-draft.md
-     - controls/CA-assessment-authorization/evidence/CA-07/conmon-sampling-plan-draft.md
+     - controls/AC-access-control/evidence/AC-02/AC-02(d)/AC_AC-02_AC-02(d)_role-matrix-draft.md
+     - controls/AC-access-control/evidence/AC-02/AC-02(a)/AC_AC-02_AC-02(a)_account-types-draft.md
+     - controls/AC-access-control/evidence/AC-06/AC-06(02)/AC_AC-06_AC-06(02)_privileged-accounts-draft.md
+     - controls/CM-configuration-management/evidence/CM-08/CM_CM-08_system-components-draft.md
+     - controls/CA-assessment-authorization/evidence/CA-07/CA_CA-07_conmon-sampling-plan-draft.md
      Review SYNTHESIZED_ARTIFACTS.md and each promoted file before treating
      this package as authoritative.
    ```
@@ -340,10 +343,10 @@ The loud signaling exists because the auto-promote flag is a fast-iteration tool
 
 If the orchestrator runs twice with `--accept-synthesized`:
 
-1. Step 6.6 detects the previously-promoted file at `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact>.md` (NOT under `synthesized/`).
+1. Step 6.6 detects the previously-promoted file at `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` (NOT under `synthesized/`).
 2. The file's frontmatter has `status: ACCEPTED-AUTO` and a `generated_at` timestamp from the prior run.
 3. Step 6.6 compares the current run's draft (newly generated under `synthesized/`) against the promoted file. If the contents are byte-identical, do nothing — the artifact is already adopted. If different, write the new draft to `synthesized/` BUT do NOT auto-overwrite the promoted file. Update SYNTHESIZED_ARTIFACTS.md's row to status `DRAFT-CHANGED (auto-promoted-stale, <date>)` so the user sees that a re-run produced a different draft and the live evidence may be out of date.
-4. Never auto-overwrite an existing `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact>.md`. The orchestrator never destroys a previously-accepted artifact silently.
+4. Never auto-overwrite an existing `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md`. The orchestrator never destroys a previously-accepted artifact silently.
 
 ## When NOT to synthesize
 
