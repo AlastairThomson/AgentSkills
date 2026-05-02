@@ -114,7 +114,7 @@ they can never collide with repo-sourced evidence:
 (`controls/AC-access-control/evidence/AC-02/AC-02(a)/...`). Sub-control
 routing is the orchestrator's responsibility — Step 4.6 reads each
 sibling's evidence file and emits per-Determine-If-ID
-`_relevant-evidence.md` manifests that reference parent-level files by
+`<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md` manifests that reference parent-level files by
 relative path. This keeps siblings simple (no need to classify which
 sub-letter or enhancement an IAM role addresses) and keeps the package
 free of duplicate evidence files. The citation batch's `controls` array

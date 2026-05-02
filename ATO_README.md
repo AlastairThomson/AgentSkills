@@ -85,13 +85,13 @@ docs/ato-package/
     │   └── evidence/
     │       ├── AC-02/                     ← Parent-level evidence files copied here
     │       │   ├── <files>
-    │       │   ├── AC-02(a)/_relevant-evidence.md   ← Manifest pointing at parent-level files
-    │       │   ├── AC-02(d)/_relevant-evidence.md
-    │       │   ├── AC-02(01)/_relevant-evidence.md
-    │       │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md
+    │       │   ├── AC-02(a)/AC_AC-02_AC-02(a)_relevant-evidence.md
+    │       │   ├── AC-02(d)/AC_AC-02_AC-02(d)_relevant-evidence.md
+    │       │   ├── AC-02(01)/AC_AC-02_AC-02(01)_relevant-evidence.md
+    │       │   └── AC-02(12)/AC-02(12)(b)/AC_AC-02_AC-02(12)(b)_relevant-evidence.md
     │       ├── AC-03/                     ← Single Determine If ID — no sub-control nesting
     │       │   ├── <files>
-    │       │   └── _relevant-evidence.md
+    │       │   └── AC_AC-03_relevant-evidence.md
     │       └── ...
     ├── AT-awareness-training/
     ├── AU-audit-accountability/
@@ -302,7 +302,7 @@ Step 4    GENERATE   Synthesize narrative documents with embedded Mermaid diagra
 Step 4.5  ENUMERATE  Build .staging/sub-control-inventory.json — every Determine If ID
                      for every in-scope control (sub-letters, enhancements, enhancement-with-sub-letter)
 Step 4.6  SC-ROUTE   Sub-control evidence routing — emit
-                     evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/_relevant-evidence.md manifests
+                     evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md manifests
 Step 5    ANALYZE    Deep code analysis for security-relevant patterns
 Step 6    GAP        Identify missing items per sub-item;
                      per-family narrative iterates EVERY Determine If ID with H3 sub-sections
@@ -366,18 +366,18 @@ controls/AC-access-control/
     │   ├── auth.ts                                         ← copied from repo / sibling
     │   ├── role-check-middleware.ts
     │   ├── role-matrix.yaml
-    │   ├── AC-02(a)/_relevant-evidence.md                  ← Manifest: relative paths to parent files
-    │   ├── AC-02(d)/_relevant-evidence.md
-    │   ├── AC-02(01)/_relevant-evidence.md                 ← Enhancement, peer of sub-letters
-    │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md    ← Enhancement-with-sub-letter, nested
+    │   ├── AC-02(a)/AC_AC-02_AC-02(a)_relevant-evidence.md             ← Manifest: relative paths to parent files
+    │   ├── AC-02(d)/AC_AC-02_AC-02(d)_relevant-evidence.md
+    │   ├── AC-02(01)/AC_AC-02_AC-02(01)_relevant-evidence.md           ← Enhancement, peer of sub-letters
+    │   └── AC-02(12)/AC-02(12)(b)/AC_AC-02_AC-02(12)(b)_relevant-evidence.md  ← Enhancement-with-sub-letter, nested
     └── AC-03/                   ← Single Determine If ID — no sub-control nesting
         ├── AuthFilter.php
-        └── _relevant-evidence.md
+        └── AC_AC-03_relevant-evidence.md
 ```
 
 Two rules to know:
 
-- **No file duplication within a family.** Files live once at the parent control level (`evidence/AC-02/`). Each per-Determine-If-ID sub-folder carries a `_relevant-evidence.md` manifest pointing back at the parent files by relative path. The package stays compact even when a single file is relevant to many sub-letters.
+- **No file duplication within a family.** Files live once at the parent control level (`evidence/AC-02/`). Each per-Determine-If-ID sub-folder carries a `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md` manifest pointing back at the parent files by relative path. The family + control + Determine If ID embedded in the filename keeps every manifest uniquely identifiable when an assessor flattens the package or copies files into a GRC tool — `_relevant-evidence.md` files would all collide under flattening.
 - **Skip-redundant-nesting for simple controls.** When a control has exactly one Determine If ID (e.g., `AC-03`), evidence sits directly in `evidence/AC-03/` — no `evidence/AC-03/AC-03/` redundant nest.
 
 The full naming rules and folder semantics are in `agents/base/global-scope/ato-artifact-collector/references/sub-control-enumeration.md`.
@@ -435,11 +435,11 @@ When the assessment pass finds a `NotSatisfied` row whose gap is **"implementati
 
 **Default workflow (manual review):**
 
-1. The orchestrator writes the draft to `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<artifact>.md` with a `⚠ DRAFT` banner.
+1. The orchestrator writes the draft to `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` with a `⚠ DRAFT` banner. The family + control + Determine If ID prefix matches the manifest filename pattern so every orchestrator-generated file remains unambiguous when the package is flattened.
 2. A row appears in the top-level `SYNTHESIZED_ARTIFACTS.md` inventory.
 3. The Result for that Determine If ID stays `NotSatisfied`; the Findings paragraph adds "A draft artifact has been generated at `<path>` for review."
 4. **You review each draft.** Edit as needed. Either:
-   - **Accept**: copy/move the file from `synthesized/<artifact>.md` to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact>.md` (one folder up). Re-run the orchestrator — Step 6.5 will detect the present artifact and flip the Result to `Satisfied`.
+   - **Accept**: copy/move the file from `synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` (one folder up; preserve the filename). Re-run the orchestrator — Step 6.5 will detect the present artifact and flip the Result to `Satisfied`.
    - **Reject**: delete the draft. The Determine If ID stays `NotSatisfied`; the gap rolls into the next remediation cycle via `--remediation`.
 
 **`--accept-synthesized` (auto-promote):**
@@ -456,11 +456,13 @@ When passed, the orchestrator copies each draft to the parent evidence folder im
 
 | Pattern | Typical Determine If IDs | Output filename |
 |---|---|---|
-| User role matrix (Internal/External × Privileged/Non-Privileged/No-Logical-Access) | `AC-02(d)`, `AC-06(01)`, `AC-06(02)`, `AC-06(05)` | `role-matrix-draft.md` |
-| Account-type definition table | `AC-02(a)` | `account-types-draft.md` |
-| Privileged-account inventory | `AC-06(02)`, `AU-09(04)` | `privileged-accounts-draft.md` |
-| System-component inventory | `CM-08`, `PL-02` | `system-components-draft.md` |
-| Continuous-monitoring sampling plan | `CA-07` | `conmon-sampling-plan-draft.md` |
+| User role matrix (Internal/External × Privileged/Non-Privileged/No-Logical-Access) | `AC-02(d)`, `AC-06(01)`, `AC-06(02)`, `AC-06(05)` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_role-matrix-draft.md` |
+| Account-type definition table | `AC-02(a)` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_account-types-draft.md` |
+| Privileged-account inventory | `AC-06(02)`, `AU-09(04)` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_privileged-accounts-draft.md` |
+| System-component inventory | `CM-08`, `PL-02` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_system-components-draft.md` |
+| Continuous-monitoring sampling plan | `CA-07` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_conmon-sampling-plan-draft.md` |
+
+Concrete examples: `AC_AC-02_AC-02(d)_role-matrix-draft.md`, `AC_AC-02_AC-02(a)_account-types-draft.md`, `CM_CM-08_system-components-draft.md` (the simple-control case drops the redundant Determine If ID segment).
 
 **The orchestrator does NOT synthesize:**
 
@@ -479,7 +481,7 @@ Given a system that enforces role-based authorization in code (`auth.ts` defines
 2. **Step 6.5 generates Findings**: "The evidence and implementation statement support several portions of the requirement by identifying authorized users... and describing role-based and area-based access enforcement. However, the determine if statement also requires specification of the user role matrix attributes for each account type — specifically whether users are Internal or External and whether each account type is Privileged, Non-Privileged, or No Logical Access — and the provided evidence does not explicitly map the identified user roles or account types to those required attributes. The requirement is not fully satisfied."
    Result: `NotSatisfied`.
 
-3. **Step 6.6 detects the synthesizable pattern** (positive evidence claim + missing-artifact gap + synthesis-able from code) and generates a draft at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/role-matrix-draft.md`. The draft has YAML frontmatter (`status: DRAFT`, `gap_addressed: "User role matrix..."`), the strong banner, and a populated table inferred from code:
+3. **Step 6.6 detects the synthesizable pattern** (positive evidence claim + missing-artifact gap + synthesis-able from code) and generates a draft at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/AC_AC-02_AC-02(d)_role-matrix-draft.md`. The draft has YAML frontmatter (`status: DRAFT`, `gap_addressed: "User role matrix..."`), the strong banner, and a populated table inferred from code:
 
    | Role | Internal/External | Privilege class | Logical access | Source |
    |---|---|---|---|---|
@@ -488,9 +490,9 @@ Given a system that enforces role-based authorization in code (`auth.ts` defines
    | VIEWER | Internal | Non-Privileged | Per-area read | [CR-044] |
    | INVESTIGATOR | Internal | Non-Privileged | Per-area read | [CR-044] |
 
-4. **Step 6.6 appends to Findings**: "A draft artifact has been generated at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/role-matrix-draft.md` for review."
+4. **Step 6.6 appends to Findings**: "A draft artifact has been generated at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/AC_AC-02_AC-02(d)_role-matrix-draft.md` for review."
 
-5. **You review.** The draft's privilege classifications match org policy. You copy `synthesized/role-matrix-draft.md` up to `evidence/AC-02/AC-02(d)/role-matrix-draft.md`.
+5. **You review.** The draft's privilege classifications match org policy. You copy `synthesized/AC_AC-02_AC-02(d)_role-matrix-draft.md` up to `evidence/AC-02/AC-02(d)/AC_AC-02_AC-02(d)_role-matrix-draft.md` (preserve the filename so the audit trail stays intact).
 
 6. **You re-run** `/ato-artifact-collector --repo`. Step 6.5 sees the artifact at the parent level, generates new Findings ("The evidence supports the entire requirement, including the role matrix at... The requirement is satisfied."), and flips Result to `Satisfied`. The CSV updates accordingly.
 

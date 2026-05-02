@@ -58,8 +58,11 @@ defines what artifacts are needed. If it doesn't exist, use the reference copy a
                      for every in-scope control (sub-letters, enhancements, enhancement-with-sub-letter).
                      Drives every downstream sub-control step.
 4.6.  SC-ROUTE     → Sub-control evidence routing — emit
-                     evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/_relevant-evidence.md
+                     evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md
                      manifests pointing at parent-level evidence files.
+                     Filename embeds family + control + Determine If ID so
+                     manifests survive a flattened-zip presentation to
+                     assessors.
 5.    ANALYZE      → Deep code analysis for security-relevant patterns
 6.    GAP          → Identify what's missing per sub-item;
                      per-family narrative iterates EVERY Determine If ID with H3 sub-sections
@@ -451,16 +454,16 @@ docs/ato-package/
     │   └── evidence/                           ← Parent-level files + per-Determine-If-ID manifests
     │       ├── AC-02/
     │       │   ├── <parent-level files>        ← Files physically copied here
-    │       │   ├── AC-02(a)/_relevant-evidence.md   ← Step 4.6 manifest
+    │       │   ├── AC-02(a)/AC_AC-02_AC-02(a)_relevant-evidence.md
     │       │   ├── AC-02(d)/
-    │       │   │   ├── _relevant-evidence.md
-    │       │   │   └── synthesized/                ← Step 6.6: drafts for missing artifacts
-    │       │   │       └── role-matrix-draft.md    ← DRAFT (or auto-promoted up one level)
-    │       │   ├── AC-02(01)/_relevant-evidence.md
-    │       │   └── AC-02(12)/AC-02(12)(b)/_relevant-evidence.md
+    │       │   │   ├── AC_AC-02_AC-02(d)_relevant-evidence.md
+    │       │   │   └── synthesized/                       ← Step 6.6: drafts for missing artifacts
+    │       │   │       └── AC_AC-02_AC-02(d)_role-matrix-draft.md
+    │       │   ├── AC-02(01)/AC_AC-02_AC-02(01)_relevant-evidence.md
+    │       │   └── AC-02(12)/AC-02(12)(b)/AC_AC-02_AC-02(12)(b)_relevant-evidence.md
     │       ├── AC-03/                          ← Single Determine If ID — no nesting
     │       │   ├── <parent-level files>
-    │       │   └── _relevant-evidence.md
+    │       │   └── AC_AC-03_relevant-evidence.md
     │       └── ...
     ├── AT-awareness-training/
     ├── AU-audit-accountability/
@@ -843,7 +846,7 @@ Step 6 emits the **Determine If Statement** paragraph and the H3 scaffolding (Me
 
 > **Method**: Review
 > **Result**: Satisfied
-> **Evidence**: `evidence/AC-02/AC-02(a)/_relevant-evidence.md`
+> **Evidence**: `evidence/AC-02/AC-02(a)/AC_AC-02_AC-02(a)_relevant-evidence.md`
 
 **Determine If Statement.** AMIS defines and documents two allowed account types within the system: individual user accounts mapped from NIH NED IDs to AMIS identities with the roles `ADMINISTRATOR`, `DATA_ENTERER`, `VIEWER`, `INVESTIGATOR` [CR-042], and an application or service principal account for the Function App.
 
@@ -853,17 +856,17 @@ Step 6 emits the **Determine If Statement** paragraph and the H3 scaffolding (Me
 
 > **Method**: Review
 > **Result**: NotSatisfied
-> **Evidence**: `evidence/AC-02/AC-02(d)/_relevant-evidence.md`
+> **Evidence**: `evidence/AC-02/AC-02(d)/AC_AC-02_AC-02(d)_relevant-evidence.md`
 
 **Determine If Statement.** AMIS authorizes only NIH-Login-SAML-authenticated users whose NED IDs have been manually pre-provisioned by an AMIS administrator in the application's internal user table [CR-042]. The system defines four application role memberships (`ADMINISTRATOR`, `DATA_ENTERER`, `VIEWER`, `INVESTIGATOR`) and enforces access authorizations on each request through the middleware sequence `withErrorHandler → withCsrf → withAuth → checkRole/checkAreaPermission → handler`, where `checkAreaPermission(areaId, action)` applies fine-grained read, write, and delete permissions by user and area, bypassed only for the `ADMINISTRATOR` role [CR-043][CR-044].
 
-**Findings.** The evidence and implementation statement support several portions of the requirement by identifying authorized users as NIH-Login-authenticated users who are manually pre-provisioned in the AMIS user table, naming four application roles, and describing role-based and area-based access enforcement. However, the determine if statement also requires specification of the user role matrix attributes for each account type — specifically whether users are Internal or External and whether each account type is Privileged, Non-Privileged, or No Logical Access — and the provided evidence does not explicitly map the identified user roles or account types to those required attributes. The requirement is not fully satisfied. A draft artifact has been generated at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/role-matrix-draft.md` for review.
+**Findings.** The evidence and implementation statement support several portions of the requirement by identifying authorized users as NIH-Login-authenticated users who are manually pre-provisioned in the AMIS user table, naming four application roles, and describing role-based and area-based access enforcement. However, the determine if statement also requires specification of the user role matrix attributes for each account type — specifically whether users are Internal or External and whether each account type is Privileged, Non-Privileged, or No Logical Access — and the provided evidence does not explicitly map the identified user roles or account types to those required attributes. The requirement is not fully satisfied. A draft artifact has been generated at `controls/AC-access-control/evidence/AC-02/AC-02(d)/synthesized/AC_AC-02_AC-02(d)_role-matrix-draft.md` for review.
 
 ### AC-02(01) — Automated System Account Management
 
 > **Method**: Review
 > **Result**: NotSatisfied
-> **Evidence**: `evidence/AC-02/AC-02(01)/_relevant-evidence.md`
+> **Evidence**: `evidence/AC-02/AC-02(01)/AC_AC-02_AC-02(01)_relevant-evidence.md`
 
 **Determine If Statement.** AMIS supports account management by validating user authentication through the SAML callback handler and checking the AMIS user table with `findUserByNedId` each time a NED-authenticated user attempts to access the system [CR-058]. Account creation, role assignment, and disablement are performed manually by an AMIS administrator through the internal user table; no automated provisioning, recertification, or de-provisioning workflow has been detected.
 
@@ -886,7 +889,7 @@ that names the requirement as un-derivable from the repo with Result blank.]
 
 > **Method**: Review
 > **Result**: Satisfied
-> **Evidence**: `evidence/AC-03/_relevant-evidence.md`
+> **Evidence**: `evidence/AC-03/AC_AC-03_relevant-evidence.md`
 
 **Determine If Statement.** The system enforces approved logical access authorizations by requiring authentication and authorization for all application requests except `/api/health` and the SAML endpoints [CR-061]. For each request, the middleware chain validates the JWT, looks up the user record, and applies role-based and area-based authorization checks before the handler runs.
 
@@ -920,12 +923,15 @@ shapes:
   manifests** — files physically live at `evidence/<CONTROL-ID>/` (e.g.
   `evidence/AC-02/`, `evidence/AC-03/`); per-Determine-If-ID
   sub-folders (e.g. `evidence/AC-02/AC-02(a)/`) carry a
-  `_relevant-evidence.md` **manifest** that references the parent-level
-  files by relative path. Files are NOT duplicated into every
-  sub-control folder — the manifest pattern (Step 4.6) keeps the
-  package compact. Files only physically live under a sub-control
-  folder when they are uniquely produced for that sub-control (e.g., a
-  synthesized draft from Step 6.6, generated in PR-B).
+  `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md`
+  **manifest** that references the parent-level files by relative path.
+  The family + control + Determine-If-ID embedded in the filename keeps
+  every manifest uniquely identifiable when an assessor flattens the
+  package. Files are NOT duplicated into every sub-control folder — the
+  manifest pattern (Step 4.6) keeps the package compact. Files only
+  physically live under a sub-control folder when they are uniquely
+  produced for that sub-control (e.g., a synthesized draft from
+  Step 6.6).
 
 ```
 ssp-sections/01-system-description/
@@ -945,19 +951,21 @@ controls/AC-access-control/
     │   ├── role-check-middleware.ts
     │   ├── role-matrix.yaml
     │   ├── AC-02(a)/
-    │   │   └── _relevant-evidence.md   ← Manifest (Step 4.6) — points at parent-level files
+    │   │   └── AC_AC-02_AC-02(a)_relevant-evidence.md     ← Manifest (Step 4.6) — points at parent-level files
     │   ├── AC-02(b)/
-    │   │   └── _relevant-evidence.md
+    │   │   └── AC_AC-02_AC-02(b)_relevant-evidence.md
     │   ├── AC-02(d)/
-    │   │   └── _relevant-evidence.md   ← (PR-B may add a synthesized/ subfolder here)
+    │   │   ├── AC_AC-02_AC-02(d)_relevant-evidence.md
+    │   │   └── synthesized/                              ← Step 6.6 may add drafts here
+    │   │       └── AC_AC-02_AC-02(d)_role-matrix-draft.md
     │   ├── AC-02(01)/
-    │   │   └── _relevant-evidence.md
+    │   │   └── AC_AC-02_AC-02(01)_relevant-evidence.md
     │   └── AC-02(12)/
     │       └── AC-02(12)(b)/
-    │           └── _relevant-evidence.md
+    │           └── AC_AC-02_AC-02(12)(b)_relevant-evidence.md
     ├── AC-03/                      ← Single Determine If ID = control ID, no sub-control nesting
     │   ├── AuthFilter.php
-    │   └── _relevant-evidence.md
+    │   └── AC_AC-03_relevant-evidence.md
     ├── AC-06/
     │   ├── ...
     └── AC-17/
@@ -1192,27 +1200,42 @@ If validation fails, log the failure, emit the warning into INDEX.md's "Coverage
 
 The collected and generated evidence from Steps 3 and 4 sits at the **base-control level** (e.g., `controls/AC-access-control/evidence/AC-02/foo.md`). Step 4.6 produces a per-sub-control **manifest** that lists which parent-level evidence files are relevant to each Determine If ID, without duplicating the files themselves.
 
-**Output.** For every Determine If ID in the inventory, create the directory `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/` (with the skip-redundant-nesting rule below) and write a single file `_relevant-evidence.md` inside it.
+**Output.** For every Determine If ID in the inventory, create the directory `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/` (with the skip-redundant-nesting rule below) and write a single manifest file inside it.
 
-**Folder paths** (from `references/sub-control-enumeration.md`):
+**Manifest filename.** Every orchestrator-generated file embeds **family code, control ID, and Determine If ID** in its filename so it remains uniquely identifiable when an assessor flattens the package into a single zip or copies files into a GRC tool. Pattern:
 
-| Determine If ID | Folder path under `controls/<CF>-<slug>/evidence/` |
-|---|---|
-| `AC-02(a)` | `AC-02/AC-02(a)/` |
-| `AC-02(d)` | `AC-02/AC-02(d)/` |
-| `AC-02(01)` | `AC-02/AC-02(01)/` (peer of sub-letters under the same parent) |
-| `AC-02(12)(b)` | `AC-02/AC-02(12)/AC-02(12)(b)/` (nested) |
-| `AC-03` (only Determine If ID for the control is the control itself) | `AC-03/` (skip redundant `AC-03/AC-03/` nesting) |
+```
+<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md
+```
 
-**Skip-redundant-nesting rule:** if a control's `determine_if_ids` array has exactly one entry whose `id` equals the control's own key, do NOT create a `<CONTROL-ID>/<CONTROL-ID>/` directory — the parent-level `evidence/<CONTROL-ID>/` is the manifest's home.
+When the Determine If ID equals the Control ID (the simple-control case — e.g., `AC-03` has only one Determine If ID, which is `AC-03` itself), drop the redundant Determine If ID segment:
 
-**Manifest format** (`_relevant-evidence.md`):
+```
+<FAMILY>_<CONTROL-ID>_relevant-evidence.md
+```
+
+**Folder paths and full filenames** (from `references/sub-control-enumeration.md`):
+
+| Determine If ID | Folder path under `controls/<CF>-<slug>/evidence/` | Manifest filename |
+|---|---|---|
+| `AC-02(a)` | `AC-02/AC-02(a)/` | `AC_AC-02_AC-02(a)_relevant-evidence.md` |
+| `AC-02(d)` | `AC-02/AC-02(d)/` | `AC_AC-02_AC-02(d)_relevant-evidence.md` |
+| `AC-02(01)` | `AC-02/AC-02(01)/` (peer of sub-letters under the same parent) | `AC_AC-02_AC-02(01)_relevant-evidence.md` |
+| `AC-02(12)(b)` | `AC-02/AC-02(12)/AC-02(12)(b)/` (nested) | `AC_AC-02_AC-02(12)(b)_relevant-evidence.md` |
+| `AC-03` (only Determine If ID for the control is the control itself) | `AC-03/` (skip redundant `AC-03/AC-03/` nesting) | `AC_AC-03_relevant-evidence.md` |
+
+**Why the prefix matters for assessors.** Federal assessors routinely flatten the `evidence/` tree into a single working folder, copy individual files into a GRC tool, or zip the package and unpack it elsewhere. With unprefixed names like `_relevant-evidence.md` every manifest collapses to the same filename and the control context is lost. The `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_` prefix preserves the directory tree's information in the filename itself, so a flat listing of the package is still self-describing.
+
+**Skip-redundant-nesting rule:** if a control's `determine_if_ids` array has exactly one entry whose `id` equals the control's own key, do NOT create a `<CONTROL-ID>/<CONTROL-ID>/` directory — the parent-level `evidence/<CONTROL-ID>/` is the manifest's home, and the manifest filename omits the redundant Determine If ID segment (`AC_AC-03_relevant-evidence.md`, not `AC_AC-03_AC-03_relevant-evidence.md`).
+
+**Manifest format** (e.g., `AC_AC-02_AC-02(d)_relevant-evidence.md`):
 
 ```markdown
 # AC-02(d) — Relevant evidence
 
-> **Determine If ID**: AC-02(d)
+> **Family**: AC — Access Control
 > **Control**: AC-02 — Account Management
+> **Determine If ID**: AC-02(d)
 > **Determine If statement**: Specify [...]
 > **Generated**: 2026-04-30
 
@@ -1227,7 +1250,7 @@ The following parent-level evidence files (under `controls/AC-access-control/evi
 ## Notes
 
 - This file is generated by Step 4.6 of the orchestrator, not by a sibling.
-- A future synthesized draft (PR-B; see `synthesized/` if present) addresses the missing role-classification artifact.
+- A synthesized draft (Step 6.6; see `synthesized/` if present) may address a missing-artifact gap surfaced in the AC-02(d) Findings.
 ```
 
 **Decision logic for "relevant".** A parent-level evidence file is relevant to a Determine If ID when:
@@ -1238,7 +1261,7 @@ The following parent-level evidence files (under `controls/AC-access-control/evi
 
 **No file duplication.** The manifest references parent-level files by relative path. Files live under a sub-control folder *only* when they are uniquely produced for that sub-control (e.g., a synthesized draft from Step 6.6, generated in PR-B).
 
-**Side effect.** While walking the inventory, also create the directory tree itself — empty `_relevant-evidence.md` files (with the header but no rows) are emitted for Determine If IDs that have no relevant parent evidence yet. This makes the package's directory tree match the inventory shape, which is what the GRC CSV consumer expects.
+**Side effect.** While walking the inventory, also create the directory tree itself — empty manifest files (filename per the pattern above; header but no rows) are emitted for Determine If IDs that have no relevant parent evidence yet. This makes the package's directory tree match the inventory shape, which is what the GRC CSV consumer expects.
 
 After Step 4.6 completes, the package has a complete sub-control directory tree. The per-family narrative (Step 6) iterates this tree.
 
@@ -1311,7 +1334,7 @@ The per-family narrative emerging from Step 6 has the **Determine If Statement**
 
 1. The `text` field from `.staging/sub-control-inventory.json` — the requirement language.
 2. The `**Determine If Statement.**` paragraph in the per-family narrative — the implementation narrative just emitted in Step 6.
-3. The `_relevant-evidence.md` manifest emitted in Step 4.6.
+3. The per-Determine-If-ID manifest emitted in Step 4.6 (`<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_relevant-evidence.md`).
 
 **Output.** Replace the placeholders in the per-family narrative:
 
@@ -1363,11 +1386,13 @@ Spurious drafts are worse than no draft — when unsure, do not synthesize.
 
 | Pattern | Typical Determine If IDs | Output filename |
 |---|---|---|
-| User role matrix | `AC-02(d)`, `AC-06(01)`, `AC-06(02)`, `AC-06(05)` | `role-matrix-draft.md` |
-| Account-type definition table | `AC-02(a)` | `account-types-draft.md` |
-| Privileged-account inventory | `AC-06(02)`, `AU-09(04)` | `privileged-accounts-draft.md` |
-| System-component inventory | `CM-08`, `PL-02` | `system-components-draft.md` |
-| Continuous-monitoring sampling plan | `CA-07` | `conmon-sampling-plan-draft.md` |
+| User role matrix | `AC-02(d)`, `AC-06(01)`, `AC-06(02)`, `AC-06(05)` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_role-matrix-draft.md` |
+| Account-type definition table | `AC-02(a)` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_account-types-draft.md` |
+| Privileged-account inventory | `AC-06(02)`, `AU-09(04)` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_privileged-accounts-draft.md` |
+| System-component inventory | `CM-08`, `PL-02` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_system-components-draft.md` |
+| Continuous-monitoring sampling plan | `CA-07` | `<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_conmon-sampling-plan-draft.md` |
+
+Concrete filename for the AC-02(d) role matrix: `AC_AC-02_AC-02(d)_role-matrix-draft.md`. Same prefix convention as the Step 4.6 manifests so flattened-zip presentations stay self-describing. When the Determine If ID equals the Control ID (rare for synthesizable patterns, but possible), drop the redundant Determine If ID segment.
 
 Each draft has YAML frontmatter (`status: DRAFT`, `generated_by`, `generated_from`, `needs_review: true`, `gap_addressed`, `sources`) and a strong banner:
 
@@ -1381,7 +1406,7 @@ Each draft has YAML frontmatter (`status: DRAFT`, `generated_by`, `generated_fro
 
 **Output paths:**
 
-- Draft: `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<artifact-slug>.md`
+- Draft: `controls/<CF>-<slug>/evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md`
 - Inventory: `docs/ato-package/SYNTHESIZED_ARTIFACTS.md` (one row per draft, header explains review workflow)
 
 **Side-effect on Findings.** When Step 6.6 generates a draft, append a sentence to the Determine If ID's Findings paragraph: "A draft artifact has been generated at `<path>` for review." The Result stays `NotSatisfied` — the draft is not adopted yet.
@@ -1392,8 +1417,8 @@ When the scope object's `synthesis.auto_accept` is `true` (set by `--accept-synt
 
 **Auto-promote semantics:**
 
-1. Generate the draft normally under `synthesized/<artifact-slug>.md`.
-2. Copy the draft to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact-slug>.md` (one level up). The promoted copy:
+1. Generate the draft normally under `synthesized/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md`.
+2. Copy the draft to `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md` (one level up; same filename so the audit trail is preserved). The promoted copy:
    - Replaces the `⚠ DRAFT` banner with `> Generated by ato-artifact-collector on <date>; reviewed-and-accepted=auto via --accept-synthesized.`
    - Keeps `generated_by` and `generated_from` frontmatter for audit.
    - Sets `status: ACCEPTED-AUTO` (was `DRAFT`).
@@ -1405,11 +1430,11 @@ When the scope object's `synthesis.auto_accept` is `true` (set by `--accept-synt
 1. **End-of-run summary block.** Print at the end of the orchestrator's output:
    ```
    ⚠ AUTO-PROMOTED: 5 synthesized artifacts adopted as evidence.
-     - controls/AC-access-control/evidence/AC-02/AC-02(d)/role-matrix-draft.md
-     - controls/AC-access-control/evidence/AC-02/AC-02(a)/account-types-draft.md
-     - controls/AC-access-control/evidence/AC-06/AC-06(02)/privileged-accounts-draft.md
-     - controls/CM-configuration-management/evidence/CM-08/system-components-draft.md
-     - controls/CA-assessment-authorization/evidence/CA-07/conmon-sampling-plan-draft.md
+     - controls/AC-access-control/evidence/AC-02/AC-02(d)/AC_AC-02_AC-02(d)_role-matrix-draft.md
+     - controls/AC-access-control/evidence/AC-02/AC-02(a)/AC_AC-02_AC-02(a)_account-types-draft.md
+     - controls/AC-access-control/evidence/AC-06/AC-06(02)/AC_AC-06_AC-06(02)_privileged-accounts-draft.md
+     - controls/CM-configuration-management/evidence/CM-08/CM_CM-08_system-components-draft.md
+     - controls/CA-assessment-authorization/evidence/CA-07/CA_CA-07_conmon-sampling-plan-draft.md
      Review SYNTHESIZED_ARTIFACTS.md and each promoted file before treating
      this package as authoritative.
    ```
@@ -1422,7 +1447,7 @@ When the scope object's `synthesis.auto_accept` is `true` (set by `--accept-synt
    ```
 3. **CHECKLIST.md notes column.** For every Determine If ID whose Result was flipped from NotSatisfied to Satisfied due to auto-promotion, the Notes column reads `Auto-promoted draft — review before submission`.
 
-**Idempotency on re-run with `--accept-synthesized`.** If a previously-promoted file already exists at `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<artifact-slug>.md`, Step 6.6:
+**Idempotency on re-run with `--accept-synthesized`.** If a previously-promoted file already exists at `evidence/<CONTROL-ID>/<DETERMINE-IF-ID>/<FAMILY>_<CONTROL-ID>_<DETERMINE-IF-ID>_<artifact-slug>.md`, Step 6.6:
 
 - Generates the new draft under `synthesized/`.
 - Compares the new draft against the existing promoted file. If byte-identical, do nothing — the artifact is already adopted (idempotent).
